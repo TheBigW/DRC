@@ -1,0 +1,9 @@
+[Plugin]
+Loader=python
+Module=DRC
+IAge=2
+Name=DRC
+Description=digital room correction
+Authors=Tobias Wenig <TobiasWenig@yahoo.com>
+Copyright=Tobias Wenig 2013
+Website=
