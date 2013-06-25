@@ -1,0 +1,18 @@
+#!/bin/bash
+AMPLITUDE="$1"
+INPUT_HW="$2"
+START_FREQ="$3"
+END_FREQ="$4"
+DURATION="$5"
+
+OUTPUT_HW=$INPUT_HW
+BIT_DEPTH=32
+SAMPLE_RATE=44100
+SILENCE_LENGTH=2
+#INPUT_HW=hw:1,0
+#OUTPUT_HW=hw:1,0
+
+./measure $BIT_DEPTH $SAMPLE_RATE $START_FREQ $END_FREQ $DURATION $SILENCE_LENGTH $INPUT_HW $OUTPUT_HW imp.pcm $AMPLITUDE
+
+echo "calculating filters"
+drc --BCInFile=imp.pcm --PSOutFile=filter_lr.pcm --TCOutFile=test.pcm ./erb-44.1.drc

@@ -18,6 +18,9 @@
 import os, sys, inspect, struct
 
 from gi.repository import GObject, Gst, Peas, RB, Gtk, Gdk, GdkPixbuf
+from DRCUi import DRCDlg
+
+MY_ICON_IMAGE = "MY_ITEM_IMAGE"
 
 class DRCPlugin(GObject.Object, Peas.Activatable):
 	object = GObject.property(type = GObject.Object)
@@ -59,11 +62,31 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
 		self.fir_filter.set_property('kernel', kernel)
 		print inspect.getdoc( kernel )
 		self.set_filter()
-		#execute measure script to generate filters		
-		#subprocess.call(["/home/blah/trunk/blah/run.sh", "/tmp/ad_xml", "/tmp/video_xml"], cwd="PATH")
 		print "filter succesfully set"
 		self.psc_id = self.shell_player.connect('playing-song-changed', self.playing_song_changed)
-	
+		#finally add UI
+		self.add_ui( self, self.shell )
+	def add_ui(self, plugin, shell):
+		self.drcDlg = DRCDlg()
+		icon_factory = Gtk.IconFactory()
+		filename = plugin.find_file("DRC.svg")
+		print "svg: ", filename		
+		picBuff = GdkPixbuf.Pixbuf.new_from_file(filename)
+		#print inspect.getdoc( picBuff )
+		icon_factory.add( MY_ICON_IMAGE, Gtk.IconSet( picBuff ) )
+		icon_factory.add_default()
+
+		action = Gtk.Action ('DRC', 
+				_('_DRC'), 
+				_('DRC'),
+				MY_ICON_IMAGE)
+		action.connect ('activate', self.drcDlg.show_ui, shell)
+		action_group = Gtk.ActionGroup ('DRCActionGroup')
+		action_group.add_action (action)
+		ui_manager = shell.props.ui_manager
+		ui_manager.insert_action_group (action_group)
+		ui_manager.add_ui_from_file(plugin.find_file("drc-ui.xml"))
+		
 	def set_filter(self):
 		try:
 			print 'adding filter'

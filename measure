@@ -1,0 +1,127 @@
+#!/bin/bash
+
+# Automatic measuring script
+# Copyright (C) 2002-2005 Denis Sbragion
+
+# This program may be freely redistributed under the terms of
+# the GNU GPL and is provided to you as is, without any warranty
+# of any kind. Please read the file "COPYING" for details.
+
+# Useful programs
+ECHO="echo"
+RM="rm"
+MV="mv"
+GLSWEEP="glsweep"
+SOX="sox"
+LSCONV="lsconv"
+APLAY="aplay"
+ARECORD="arecord"
+SYNC="sync"
+SLEEP="sleep"
+
+# Default parameters
+TMP="/tmp"
+LEADIN="0.05"
+LEADOUT="0.005"
+MINGAIN="0.1"
+DLSTART="0.9"
+
+$ECHO 
+$ECHO "Automatic measuring script."
+$ECHO "Copyright (C) 2002-2005 Denis Sbragion"
+$ECHO 
+$ECHO "This program may be freely redistributed under the terms of"
+$ECHO "the GNU GPL and is provided to you as is, without any warranty"
+$ECHO "of any kind. Please read the file "COPYING" for details."
+$ECHO 
+
+# Command line check
+if [[ $# != 9 && $# != 10 ]]; then
+ $ECHO "Usage:"
+ $ECHO " measure bits rate startf endf lslen lssil indev outdev impfile"
+ $ECHO
+ $ECHO " bits: measuring bits (16 or 24)"
+ $ECHO " rate: sample rate"
+ $ECHO " startf: sweep start frequency in Hz"
+ $ECHO " endf: sweep end frequency in Hz"
+ $ECHO " lslen: log sweep length in seconds"
+ $ECHO " lssil: log sweep silence length in seconds"
+ $ECHO " indev: ALSA input device"
+ $ECHO " outdev: ALSA output device"
+ $ECHO " amplitude of sweep file 0.1 .. 1" 
+ $ECHO " use reference channel: 'use_ref'"
+ $ECHO "example: measure 16 44100 5 21000 45 2 plughw plughw impulse.pcm use_ref"
+ $ECHO
+ exit 0
+fi 
+
+# Get command line parameters
+BITS="$1"
+RATE="$2"
+STARTF="$3"
+ENDF="$4"
+LSLEN="$5"
+LSSIL="$6"
+INDEV="$7"
+OUTDEV="$8"
+IMPFILE="$9"
+AMPLITUDE="$10"
+USE_REF="$11"
+SWEEPFILE="sweep.pcm"
+
+# Check bits to use
+if [ "$BITS" == "24" ]; then
+ SOXFMT="-e signed-integer -b 24"
+ ARECORDFMT="S24_3LE"
+elif [ "$BITS" == "32" ]; then
+ SOXFMT="-e signed-integer -b 32"
+ ARECORDFMT="S32_LE"
+else
+ SOXFMT="-e signed-integer -b 16"
+ ARECORDFMT="S16_LE"
+fi
+
+# Generate the log sweep
+$GLSWEEP $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/msrawsweep.pcm ${TMP}/msinverse.pcm
+
+# Convert to WAV file
+$ECHO "Converting sweep to play format..."
+$SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -r $RATE -c 2 $SOXFMT ${TMP}/msplaysweep.wav
+$RM ${TMP}/msrawsweep.pcm
+
+# Filesystem sync
+$ECHO "Waiting 5 seconds for filesystem sync..."
+$SYNC
+$SLEEP 5
+
+# Record the sweep
+$ECHO "Sweep recording."
+$ECHO "Measuring channel: left. Reference channel: right."
+$SLEEP 1
+RLEN=$(( $LSLEN + $LSSIL * 2 ))
+$APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
+$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c 2 -d $RLEN ${TMP}/msrecsweep.wav
+
+# Remove the play sweep file
+$RM ${TMP}/msplaysweep.wav
+
+# Convert sweep file
+if [ $USE_REF == "use_ref" ]; then
+ $ECHO "recorded sweep ref channel conversion"
+ $SOX ${TMP}/msrecsweep.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/mssweep_ref.pcm mixer -l
+ REF_PARAM=${TMP}/mssweep_ref.pcm $MINGAIN $DLSTART
+fi
+$ECHO "recorded sweep conversion"
+$SOX ${TMP}/msrecsweep.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/mssweep_speaker.pcm mixer -r
+
+
+# Move or remove the recorded file
+$ECHO "Copying sweepfile to ${SWEEPFILE}..."
+$MV ${TMP}/msrecsweep.wav "$SWEEPFILE"
+
+# Extract the impulse response
+$LSCONV ${TMP}/mssweep_speaker.pcm ${TMP}/msinverse.pcm $IMPFILE $REF_PARAM 
+
+$ECHO "Temporary file cleanup..."
+
+$RM ${TMP}/msinverse.pcm
