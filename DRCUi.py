@@ -32,33 +32,39 @@ class DRCDlg(Gtk.Dialog):
         slider.set_range( 0.1, 1 )
         slider.set_inverted(True)
         slider.set_value_pos( Gtk.PositionType.TOP )
-        slider.set_value(aCfg.recordGain)
+        self.sweep_level = aCfg.recordGain
+        slider.set_value(self.sweep_level)
         slider.set_size_request( 100, 300 )
         slider.connect( "value_changed", self.slider_changed )
-        labelFreq = Gtk.Label( "sweep gain" )
 
-        entry = Gtk.Entry()
-        entry.set_text( aCfg.filterFile )
-        self.vbox.add(entry)
+        self.entryFilterFile = Gtk.Entry()
+        self.vbox.add( Gtk.Label( "filter file" ) )
+        self.filterFile = aCfg.filterFile
+        self.entryFilterFile.set_text( self.filterFile )
+        self.vbox.add(self.entryFilterFile)
         self.vbox.add(slider)
+        self.vbox.add( Gtk.Label( "sweep gain[%]" ) )
+        measureBtn = Gtk.Button( "measure" )
+        measureBtn.connect( "clicked", self.on_execMeasure )
         self.vbox.add(applyBtn)
 
     def slider_changed(self, hscale):
     	self.sweep_level = hscale.get_value();
 
     def on_apply_settings(self, some_param):
-	    aCfg = Config()
-	    aCfg.filterFile = self.filterFile
-	    aCfg.save()
+        aCfg = Config()
+        aCfg.filterFile = self.entryFilterFile.get_text()
+        aCfg.recordGain = self.sweep_level
+        aCfg.save()
 
-    def execMeasure(self):
-	     #execute measure script to generate filters		
-	     subprocess.call(["./measure1Channel", self.amplitude, self.inputhw, self.start_freq, self.end_freq, self.measure_duration], cwd="./")
+    def on_execMeasure(self):
+        #execute measure script to generate filters		
+        subprocess.call(["./measure1Channel", self.amplitude, self.inputhw, self.start_freq, self.end_freq, self.measure_duration], cwd="./")
 			
     def on_close(self, shell):
-	    print "closing ui"
-	    self.set_visible(False)
-	    return True
+        print "closing ui"
+        self.set_visible(False)
+        return True
 
     def show_ui(self, shell, state):
         print "showing UI"
@@ -67,5 +73,5 @@ class DRCDlg(Gtk.Dialog):
         print "done showing UI"
 
     def on_destroy(self, widget, data):
-	    self.on_close(None)
-	    return True
+        self.on_close(None)
+        return True

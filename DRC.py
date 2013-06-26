@@ -1,4 +1,4 @@
-# ParametricEQ.py
+# DRC.py
 # Copyright (C) 2013 - Tobias Wenig
 #			tobiaswenig@yahoo.com>
 #
@@ -20,6 +20,7 @@ import os, sys, inspect, struct
 from gi.repository import GObject, Gst, Peas, RB, Gtk, Gdk, GdkPixbuf
 from DRCUi import DRCDlg
 
+from config import Config
 MY_ICON_IMAGE = "MY_ITEM_IMAGE"
 
 class DRCPlugin(GObject.Object, Peas.Activatable):
@@ -34,25 +35,28 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
 		self.fir_filter = Gst.ElementFactory.make('audiofirfilter', 'MyFIRFilter')	
 		print "audiofirfilter :", self.fir_filter
 		#open filter files
-		filter_data_left = open( "/home/tobias/.local/share/rhythmbox/plugins/DRC/filter_lr.pcm", "r" )
-		filter_data_right = open( "/home/tobias/.local/share/rhythmbox/plugins/DRC/filter_lr.pcm", "r" )
-		#read the pcm data as 32 bit float
-		filter_array = []
-		read_left = filter_data_left.read( 4 )
-		read_right = filter_data_right.read( 4 )
-		while read_left != "" and filter_data_right != "":
-			#read left chanel
-			float_left = struct.unpack( 'f', read_left )[0]
+		aCfg = Config()
+		num_filter_coeff = 0
+		if aCfg.filterFile != '':
+			filter_data_left = open( "./"+aCfg.filterFile, "r" )
+			#filter_data_right = open( aCfg.filterFile, "r" )
+			#read the pcm data as 32 bit float
+			filter_array = []
 			read_left = filter_data_left.read( 4 )
-			filter_array.append( float_left )
-			#read right chanel			
-			float_right = struct.unpack( 'f', read_right )[0]
-			read_right = filter_data_right.read( 4 )
-			#filter_array.append( float_right )
-		#pass the filter data to the fir filter
-		print inspect.getdoc( self.fir_filter )
-		num_filter_coeff = len( filter_array )		
-		self.fir_filter.set_property( 'latency', num_filter_coeff /2 )		
+			#read_right = filter_data_right.read( 4 )
+			while read_left != "":# and filter_data_right != "":
+				#read left chanel
+				float_left = struct.unpack( 'f', read_left )[0]
+				read_left = filter_data_left.read( 4 )
+				filter_array.append( float_left )
+				#read right chanel			
+				#float_right = struct.unpack( 'f', read_right )[0]
+				#read_right = filter_data_right.read( 4 )
+				#filter_array.append( float_right )
+			#pass the filter data to the fir filter
+			#print inspect.getdoc( self.fir_filter )
+			num_filter_coeff = len( filter_array )
+		self.fir_filter.set_property( 'latency', num_filter_coeff /2 )
 		print "num_filter_coeff", num_filter_coeff
 		kernel = self.fir_filter.get_property('kernel')
 		print "kernel : ", kernel		
