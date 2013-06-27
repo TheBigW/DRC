@@ -37,6 +37,18 @@ class DRCDlg(Gtk.Dialog):
         slider.set_size_request( 100, 300 )
         slider.connect( "value_changed", self.slider_changed )
 
+        name_store = Gtk.ListStore(int, str)
+        p = subprocess.Popen(["aplay", "-l"], stdout=subprocess.PIPE)
+        out, err = p.communicate()
+        print( "output from aplay : " + out )
+        #append all available audio devices
+        #name_store.append([ 0, EQBandParams.get_string_from_band_type(0)] )
+        self.comboType = Gtk.ComboBox.new_with_model_and_entry(name_store)
+        self.comboType.set_entry_text_column(1)
+        self.comboType.set_active(0)
+        self.vbox.add( Gtk.Label( "sound hardware" ) )
+        self.vbox.add(self.comboType)
+
         self.entryFilterFile = Gtk.Entry()
         self.vbox.add( Gtk.Label( "filter file" ) )
         self.filterFile = aCfg.filterFile
@@ -46,6 +58,7 @@ class DRCDlg(Gtk.Dialog):
         self.vbox.add( Gtk.Label( "sweep gain[%]" ) )
         measureBtn = Gtk.Button( "measure" )
         measureBtn.connect( "clicked", self.on_execMeasure )
+        self.vbox.add(measureBtn)
         self.vbox.add(applyBtn)
 
     def slider_changed(self, hscale):
