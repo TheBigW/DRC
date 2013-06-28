@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, Gst
-import os, sys, inspect, subprocess
+import os, sys, inspect, subprocess, re
 from config import Config
 
 class DRCDlg(Gtk.Dialog):
@@ -42,7 +42,13 @@ class DRCDlg(Gtk.Dialog):
         out, err = p.communicate()
         print( "output from aplay : " + out )
         #append all available audio devices
-        #name_store.append([ 0, EQBandParams.get_string_from_band_type(0)] )
+        #parse all card:X ... device:y ... to alsa devices
+        pattern = re.compile('(\d):.*(\d):(.*)', re.MULTILINE)
+        self.found = pattern.findall(out)
+        print("found pattern : ", self.found)
+        for i in range(0, len(self.found)):
+            name_store.append([ i, self.found[i][2] ] )
+            #self.hw_list ... "hw:" + str(stri[1])
         self.comboType = Gtk.ComboBox.new_with_model_and_entry(name_store)
         self.comboType.set_entry_text_column(1)
         self.comboType.set_active(0)
