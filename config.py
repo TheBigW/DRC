@@ -25,12 +25,28 @@ class Config:
 	def load(self):	
 		conf = GConf.Client.get_default()
 		self.filterFile = conf.get_string( DRC_GCONF_BASE_PATH + '/filterFile' )
+		self.alsaDevice = conf.get_string( DRC_GCONF_BASE_PATH + '/alsaDevice' )
 		self.recordGain = conf.get_float( DRC_GCONF_BASE_PATH + '/recordGain' )
+		self.startFrequency = conf.get_int( DRC_GCONF_BASE_PATH + '/startFrequency' )
+		self.endFrequency = conf.get_int( DRC_GCONF_BASE_PATH + '/endFrequency' )
+		self.sweepDuration = conf.get_int( DRC_GCONF_BASE_PATH + '/sweepDuration' )
 		if None == self.filterFile:
 			self.filterFile = ""
 		if None == self.recordGain:
 			self.recordGain = 0.5
+		if None == self.startFrequency:
+			self.startFrequency = 50
+		if None == self.endFrequency:
+			self.endFrequency = 21000
+		if None == self.sweepDuration:
+			self.sweepDuration = 40
+		if None == self.alsaDevice:
+			self.alsaDevice = ""
 	def save( self ):
 		conf = GConf.Client.get_default()
 		conf.set_string( DRC_GCONF_BASE_PATH + '/filterFile', self.filterFile )
+		conf.set_string( DRC_GCONF_BASE_PATH + '/alsaDevice', self.alsaDevice )
 		conf.set_float( DRC_GCONF_BASE_PATH + '/recordGain', self.recordGain )
+		conf.set_int( DRC_GCONF_BASE_PATH + '/startFrequency', self.startFrequency )
+		conf.set_int( DRC_GCONF_BASE_PATH + '/endFrequency', self.endFrequency )
+		conf.set_int( DRC_GCONF_BASE_PATH + '/sweepDuration', self.sweepDuration )

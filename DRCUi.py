@@ -18,6 +18,14 @@ from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, Gst
 import os, sys, inspect, subprocess, re
 from config import Config
 
+class LabeledEdit:
+    def __init__(self, box, text, value):
+        label = Gtk.Label( text )
+        box.add(label)
+        self.entry = Gtk.Entry()
+        self.entry.set_text( value )
+        box.add( self.entry )
+
 class DRCDlg(Gtk.Dialog):
     def __init__(self):
         super(Gtk.Dialog, self).__init__()
@@ -44,42 +52,54 @@ class DRCDlg(Gtk.Dialog):
         #append all available audio devices
         #parse all card:X ... device:y ... to alsa devices
         pattern = re.compile('(\d):.*(\d):(.*)', re.MULTILINE)
-        self.found = pattern.findall(out)
-        print("found pattern : ", self.found)
-        for i in range(0, len(self.found)):
-            name_store.append([ i, self.found[i][2] ] )
-            #self.hw_list ... "hw:" + str(stri[1])
-        self.comboType = Gtk.ComboBox.new_with_model_and_entry(name_store)
-        self.comboType.set_entry_text_column(1)
-        self.comboType.set_active(0)
+        self.alsaHardwareList = pattern.findall(out)
+        for i in range(0, len(self.alsaHardwareList)):
+            name_store.append([ i, self.alsaHardwareList[i][2] ] )
+        self.alsaHardwareCombo = Gtk.ComboBox.new_with_model_and_entry(name_store)
+        self.alsaHardwareCombo.set_entry_text_column(1)
+        self.alsaHardwareCombo.set_active(0)
         self.vbox.add( Gtk.Label( "sound hardware" ) )
-        self.vbox.add(self.comboType)
+        self.vbox.add(self.alsaHardwareCombo)
 
-        self.entryFilterFile = Gtk.Entry()
-        self.vbox.add( Gtk.Label( "filter file" ) )
-        self.filterFile = aCfg.filterFile
-        self.entryFilterFile.set_text( self.filterFile )
-        self.vbox.add(self.entryFilterFile)
+        #TBC: connect to Gtk.Entry to insert_text event to do input validation
+        self.entryFilterFile = LabeledEdit(self.vbox, "filter file", aCfg.filterFile )
+        self.entryStartFreq = LabeledEdit(self.vbox, "start freq. [Hz]", str(aCfg.startFrequency) )
+        self.entryEndFreq = LabeledEdit(self.vbox, "end freq. [Hz]", str(aCfg.endFrequency) )
+        self.entrySweepDuration = LabeledEdit(self.vbox, "sweep duration. [s]", str(aCfg.sweepDuration) )
         self.vbox.add(slider)
         self.vbox.add( Gtk.Label( "sweep gain[%]" ) )
         measureBtn = Gtk.Button( "measure" )
         measureBtn.connect( "clicked", self.on_execMeasure )
         self.vbox.add(measureBtn)
         self.vbox.add(applyBtn)
+        print("found pattern : ", self.alsaHardwareList, " alsa HW : ", self.getAlsaHardwareString())
 
     def slider_changed(self, hscale):
     	self.sweep_level = hscale.get_value();
 
     def on_apply_settings(self, some_param):
         aCfg = Config()
-        aCfg.filterFile = self.entryFilterFile.get_text()
+        aCfg.alsaDevice = self.getAlsaHardwareString()
+        aCfg.filterFile = self.entryFilterFile.entry.get_text()
         aCfg.recordGain = self.sweep_level
+        aCfg.startFrequency = int( entryStartFreq.entry.get_text() )
+        aCfg.endFrequency = int( entryEndFreq.entry.get_text() )
+        aCfg.sweepDuration = int( entrySweepDuration.entry.get_text() )
         aCfg.save()
 
+    def getAlsaHardwareString(self):
+        alsHardwareSelIndex = self.alsaHardwareCombo.get_active()
+        alsaDevicePlaybackRecord = "hw:" + str(self.alsaHardwareList[alsHardwareSelIndex][0]) + "," + str(self.alsaHardwareList[alsHardwareSelIndex][1])
+        print("alsa device used : " + alsaDevicePlaybackRecord)
+        return alsaDevicePlaybackRecord
+
     def on_execMeasure(self):
-        #execute measure script to generate filters		
-        subprocess.call(["./measure1Channel", self.amplitude, self.inputhw, self.start_freq, self.end_freq, self.measure_duration], cwd="./")
-			
+        aCfg = Config()        
+        #execute measure script to generate filters
+        p = subprocess.Popen( [ "./measure1Channel", self.amplitude + ", " + aCfg.alsaDevice  + ", " + string(self.start_freq)  + ", " +  string(self.end_freq) + ", " +  self.measure_duration ], stdout=subprocess.PIPE)
+        out, err = p.communicate()
+        print( "output from measure script : " + out )
+
     def on_close(self, shell):
         print "closing ui"
         self.set_visible(False)
