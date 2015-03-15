@@ -1,6 +1,6 @@
 # DRC.py
 # Copyright (C) 2013 - Tobias Wenig
-#			tobiaswenig@yahoo.com>
+#            tobiaswenig@yahoo.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,113 +20,262 @@ import os, sys, inspect, struct
 from gi.repository import GObject, Gst, Peas, RB, Gtk, Gdk, GdkPixbuf
 from DRCUi import DRCDlg
 
-from config import Config
-MY_ICON_IMAGE = "MY_ITEM_IMAGE"
+import DRC_rb3compat
+import math
+import wave
+from DRC_rb3compat import ActionGroup
+from DRC_rb3compat import Action
+from DRC_rb3compat import ApplicationShell
+
+from DRCConfig import DRCConfig
+
+ui_string="""
+<ui>
+  <menubar name="MenuBar">
+    <menu name="ControlMenu" action="Control">
+      <placeholder name="PluginPlaceholder">
+        <menuitem name="Digital Room Correction" action="DRC"/>
+      </placeholder>
+    </menu>
+  </menubar>
+</ui>
+"""
+
+class WaveParams:
+
+    def __init__(self):
+        self.DataOffset = 0
+        self.numChannels = 0
+        self.sampleByteSize = 0
+
+# WavHeader.py
+#   Extract basic header information from a WAV file
+#...taken from http://blog.theroyweb.com/extracting-wav-file-header-information-using-a-python-script
+#   slightly modified to pass out parse result
+def PrintWavHeader(strWAVFile):
+    """ Extracts data in the first 44 bytes in a WAV file and writes it
+            out in a human-readable format
+    """
+    def DumpHeaderOutput(structHeaderFields):
+        for key in structHeaderFields.keys():
+            print( "%s: " % (key), structHeaderFields[key])
+        # end for
+    # Open file
+    fileIn = open(strWAVFile, 'rb')
+    # end try
+    # Read in all data
+    bufHeader = fileIn.read(38)
+    # Verify that the correct identifiers are present
+    #print( "bufHeader[0:4]", bufHeader[0:4].decode("utf-8"), " : ", str(bufHeader[0:4].decode("utf-8")) == 'RIFF' )
+    if (bufHeader[0:4].decode("utf-8") != "RIFF") or \
+       (bufHeader[12:16].decode("utf-8") != "fmt "):
+         print("Input file not a standard WAV file")
+         return
+    # endif
+    stHeaderFields = {'ChunkSize' : 0, 'Format' : '',
+        'Subchunk1Size' : 0, 'AudioFormat' : 0,
+        'NumChannels' : 0, 'SampleRate' : 0,
+        'ByteRate' : 0, 'BlockAlign' : 0,
+        'BitsPerSample' : 0, 'Filename': ''}
+    # Parse fields
+    stHeaderFields['ChunkSize'] = struct.unpack('<L', bufHeader[4:8])[0]
+    stHeaderFields['Format'] = bufHeader[8:12]
+    stHeaderFields['Subchunk1Size'] = struct.unpack('<L', bufHeader[16:20])[0]
+    stHeaderFields['AudioFormat'] = struct.unpack('<H', bufHeader[20:22])[0]
+    stHeaderFields['NumChannels'] = struct.unpack('<H', bufHeader[22:24])[0]
+    stHeaderFields['SampleRate'] = struct.unpack('<L', bufHeader[24:28])[0]
+    stHeaderFields['ByteRate'] = struct.unpack('<L', bufHeader[28:32])[0]
+    stHeaderFields['BlockAlign'] = struct.unpack('<H', bufHeader[32:34])[0]
+    stHeaderFields['BitsPerSample'] = struct.unpack('<H', bufHeader[34:36])[0]
+    # Locate & read data chunk
+    chunksList = []
+    dataChunkLocation = 0
+    fileIn.seek(0, 2) # Seek to end of file
+    inputFileSize = fileIn.tell()
+    nextChunkLocation = 12 # skip the RIFF header
+    while 1:
+        # Read subchunk header
+        fileIn.seek(nextChunkLocation)
+        bufHeader = fileIn.read(8)
+        if bufHeader[0:4].decode("utf-8") == "data":
+            print("data section found at : ", fileIn.tell() )
+            dataChunkLocation = nextChunkLocation
+        # endif
+        nextChunkLocation += (8 + struct.unpack('<L', bufHeader[4:8])[0])
+        chunksList.append(bufHeader[0:4])
+        if nextChunkLocation >= inputFileSize:
+            break
+        # endif
+    # end while
+    # Dump subchunk list
+    print( "Subchunks Found: ")
+    for chunkName in chunksList:
+        print( "%s, " % (chunkName),)
+    # end for
+    print("\n")
+    # Dump data chunk information
+    if dataChunkLocation != 0:
+        fileIn.seek(dataChunkLocation)
+        bufHeader = fileIn.read(8)
+        print("Data Chunk located at offset [%s] of data length [%s] bytes" % \
+            (dataChunkLocation, struct.unpack('<L', bufHeader[4:8])[0]))
+    # endif
+    # Print output
+    stHeaderFields['Filename'] = os.path.basename(strWAVFile)
+    DumpHeaderOutput(stHeaderFields)
+    # Close file
+    fileIn.close()
+    params = WaveParams()
+    params.DataOffset = int(dataChunkLocation) + 8
+    params.numChanels = int(stHeaderFields['NumChannels'])
+    params.sampleByteSize = int(stHeaderFields['BitsPerSample']/8)
+    return params
+
+def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
+    #print(os.getcwd() + "\n")
+    print("numChanels : ", numChanels)
+    filterFile = open( filename, "rb" )
+    #filter_data_right = open( aCfg.filterFile, "r" )
+    #read the pcm data as 32 bit float
+    filter_array = []
+    filterFile.seek(offset)
+    #debug
+    #tmpData = filterFile.read()
+    #filterFile.seek(offset)
+    #tmpFilterFileName = "/home/tobias/.local/share/rhythmbox/plugins/DRC/tmpFilter.raw"
+    #tmpFilterFile = open( tmpFilterFileName, "wb" )
+    #tmpFilterFile.write(tmpData)
+    #end debug
+    readData = filterFile.read( sampleByteSize )
+    count = 0
+    while len(readData) == sampleByteSize:
+        floatSample = float(0.0)
+        for chanel in range(0, numChanels):
+            #print("readData : " + str(len(readData)), str(readData) )
+            #if chanel == 0:
+            floatSample = floatSample + struct.unpack( 'f', readData )[0]
+            readData = filterFile.read( sampleByteSize )
+        floatSample = float(floatSample/numChanels)
+        if math.isnan(floatSample):
+            print( "value is NaN : resetting to 0" )
+            floatSample = 0
+        if floatSample > 1 or floatSample < -1:
+            print( "detected value probably out of range : ", floatSample )
+        #TODO: devided filter value by 500 because most filters seem to be too 'strong
+        filter_array.append( float(floatSample/500) )
+        #if len(filter_array) == 128:
+        #    break
+        #dump the filter to check
+    #s = struct.pack('f'*len(filter_array), *filter_array)
+    #f = open('/home/tobias/.local/share/rhythmbox/plugins/DRC/appliedFilter.raw','wb')
+    #f.write(s)
+    #f.close()
+    return filter_array
+
+def LoadWaveFile(filename):
+    filter_array = []
+    params = PrintWavHeader(filename)
+    numChanels = params.numChanels
+    print("numChanels : ", numChanels)
+    return LoadRawFile( filename, numChanels, params.sampleByteSize, params.DataOffset )
 
 class DRCPlugin(GObject.Object, Peas.Activatable):
-	object = GObject.property(type = GObject.Object)
-	def __init__(self):
-		super(DRCPlugin, self).__init__()
+    object = GObject.property(type = GObject.Object)
+    def __init__(self):
+        super(DRCPlugin, self).__init__()
 
-	def do_activate(self):
-		self.shell = self.object
-		self.shell_player = self.shell.props.shell_player
-		self.player = self.shell_player.props.player
-		self.fir_filter = Gst.ElementFactory.make('audiofirfilter', 'MyFIRFilter')	
-		print "audiofirfilter :", self.fir_filter
-		#open filter files
-		aCfg = Config()
-		num_filter_coeff = 0
-		if aCfg.filterFile != '':
-			filter_data_left = open( "./"+aCfg.filterFile, "r" )
-			#filter_data_right = open( aCfg.filterFile, "r" )
-			#read the pcm data as 32 bit float
-			filter_array = []
-			read_left = filter_data_left.read( 4 )
-			#read_right = filter_data_right.read( 4 )
-			while read_left != "":# and filter_data_right != "":
-				#read left chanel
-				float_left = struct.unpack( 'f', read_left )[0]
-				read_left = filter_data_left.read( 4 )
-				filter_array.append( float_left )
-				#read right chanel			
-				#float_right = struct.unpack( 'f', read_right )[0]
-				#read_right = filter_data_right.read( 4 )
-				#filter_array.append( float_right )
-			#pass the filter data to the fir filter
-			#print inspect.getdoc( self.fir_filter )
-			num_filter_coeff = len( filter_array )
-		self.fir_filter.set_property( 'latency', num_filter_coeff /2 )
-		print "num_filter_coeff", num_filter_coeff
-		kernel = self.fir_filter.get_property('kernel')
-		print "kernel : ", kernel		
-		for i in range(0, num_filter_coeff):
-			 kernel.append( filter_array[i] )
-			 #print "index %i : %f" % (i, filter_array[i])
-		self.fir_filter.set_property('kernel', kernel)
-		print inspect.getdoc( kernel )
-		self.set_filter()
-		print "filter succesfully set"
-		self.psc_id = self.shell_player.connect('playing-song-changed', self.playing_song_changed)
-		#finally add UI
-		self.add_ui( self, self.shell )
-	def add_ui(self, plugin, shell):
-		self.drcDlg = DRCDlg()
-		icon_factory = Gtk.IconFactory()
-		filename = plugin.find_file("DRC.svg")
-		print "svg: ", filename		
-		picBuff = GdkPixbuf.Pixbuf.new_from_file(filename)
-		#print inspect.getdoc( picBuff )
-		icon_factory.add( MY_ICON_IMAGE, Gtk.IconSet( picBuff ) )
-		icon_factory.add_default()
+    def updateFilter(self, filterFileName):
+        if filterFileName != '':
+            fileExt = os.path.splitext(filterFileName)[-1]
+            print("ext = " + fileExt)
+            if fileExt == ".wav":
+                filter_array = LoadWaveFile(filterFileName)
+            else:
+                filter_array = LoadRawFile(filterFileName, 1)
+            #pass the filter data to the fir filter
+            #print inspect.getdoc( self.fir_filter )
+            num_filter_coeff = len( filter_array )
+        self.fir_filter.set_property( 'latency', int(num_filter_coeff /2) )
+        print( "num_filter_coeff", num_filter_coeff )
+        kernel = self.fir_filter.get_property('kernel')
+        #print( "kernel : ", kernel)
+        for i in range(0, num_filter_coeff):
+             kernel.append( filter_array[i] )
+             #print( filter_array[i] )
+        self.fir_filter.set_property('kernel', kernel)
 
-		action = Gtk.Action ('DRC', 
-				_('_DRC'), 
-				_('DRC'),
-				MY_ICON_IMAGE)
-		action.connect ('activate', self.drcDlg.show_ui, shell)
-		action_group = Gtk.ActionGroup ('DRCActionGroup')
-		action_group.add_action (action)
-		ui_manager = shell.props.ui_manager
-		ui_manager.insert_action_group (action_group)
-		ui_manager.add_ui_from_file(plugin.find_file("drc-ui.xml"))
-		
-	def set_filter(self):
-		try:
-			print 'adding filter'
-			self.player.add_filter(self.fir_filter)
-			print 'done setting filter'
-		except Exception as inst:
-			print 'unexpected exception',  sys.exc_info()[0], type(inst), inst  
-			pass
+    def do_activate(self):
+        try:
+            self.shell = self.object
+            self.shell_player = self.shell.props.shell_player
+            self.player = self.shell_player.props.player
+            #audioiirfilter
+            self.fir_filter = Gst.ElementFactory.make('audiofirfilter', 'MyFIRFilter')
+            print( "audiofirfilter :" + str(self.fir_filter) )
+            #open filter files
+            aCfg = DRCConfig()
+            self.updateFilter(aCfg.filterFile)
+            #print( inspect.getdoc( kernel ) )
+            self.set_filter()
+            print( "filter succesfully set" )
+        except Exception as inst:
+            print( 'filter not set',  sys.exc_info()[0], type(inst), inst )
+            pass
+        self.psc_id = self.shell_player.connect('playing-song-changed', self.playing_song_changed)
+        #finally add UI
+        self.add_ui( self, self.shell )
 
-	def do_deactivate(self):
-		print 'entering do_deactivate'
-		self.shell_player.disconnect(self.psc_id)
-		
-		try:		
-			self.player.remove_filter(self.fir_filter)
-			print 'filter disabled'	
-		except:
-			pass
-					
-		del self.shell_player
-		del self.shell
-		del self.fir_filter
+    def add_ui(self, plugin, shell):
+        self.drcDlg = DRCDlg(self)
+        print("starting add_ui")
+        action_group = ActionGroup(shell, 'DRCActionGroup')
+        action_group.add_action(func=self.drcDlg.show_ui,
+            action_name='DRC', label=_('_DRC'),
+            action_type='app')
+        self._appshell = ApplicationShell(shell)
+        self._appshell.insert_action_group(action_group)
+        self._appshell.add_app_menuitems(ui_string, 'DRCActionGroup')
+        print("add_ui done")
 
-	def playing_song_changed(self, sp, entry):
-		if entry == None:
-			return
-		genre = entry.get_string(RB.RhythmDBPropType.GENRE)
-		print "genre : " + str(genre)
-		print entry.get_string(RB.RhythmDBPropType.ALBUM)
-		print entry.get_string(RB.RhythmDBPropType.TITLE)
-	def find_file(self, filename):
-		info = self.plugin_info
-		data_dir = info.get_data_dir()
-		path = os.path.join(data_dir, filename)
-		
-		if os.path.exists(path):
-			return path
+    def set_filter(self):
+        try:
+            print( 'adding filter' )
+            self.player.add_filter(self.fir_filter)
+            print('done setting filter' )
+        except Exception as inst:
+            print( 'unexpected exception',  sys.exc_info()[0], type(inst), inst )
+            pass
 
-		return RB.file(filename)
+    def do_deactivate(self):
+        print( 'entering do_deactivate' )
+        self.shell_player.disconnect(self.psc_id)
+
+        try:
+            self.player.remove_filter(self.fir_filter)
+            print( 'filter disabled' )
+            shell = self.object
+            self._appshell.cleanup()
+        except:
+            pass
+
+        del self.shell_player
+        del self.shell
+        del self.fir_filter
+
+    def playing_song_changed(self, sp, entry):
+        if entry == None:
+            return
+        genre = entry.get_string(RB.RhythmDBPropType.GENRE)
+        print( "genre : ", str(genre) )
+         #print( entry.get_string(RB.RhythmDBPropType.ALBUM) )
+        #print( entry.get_string(RB.RhythmDBPropType.TITLE) )
+
+    def find_file(self, filename):
+        info = self.plugin_info
+        data_dir = info.get_data_dir()
+        path = os.path.join(data_dir, filename)
+
+        if os.path.exists(path):
+            return path
+
+        return RB.file(filename)

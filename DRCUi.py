@@ -1,6 +1,6 @@
 # DRCUi.py
 # Copyright (C) 2013 - Tobias Wenig
-#			tobiaswenig@yahoo.com>
+#            tobiaswenig@yahoo.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, Gst
 import os, sys, inspect, subprocess, re
-from config import Config
+from DRCConfig import DRCConfig
 
 class LabeledEdit:
     def __init__(self, box, text, value):
@@ -27,10 +27,11 @@ class LabeledEdit:
         box.add( self.entry )
 
 class DRCDlg(Gtk.Dialog):
-    def __init__(self):
+    def __init__(self, parent):
         super(Gtk.Dialog, self).__init__()
-        aCfg = Config()
-        self.set_deletable(False)	
+        self.parent = parent
+        aCfg = DRCConfig()
+        self.set_deletable(False)
         self.connect( "delete-event", self.on_destroy )
         self.set_title( "DRC" )
         applyBtn = Gtk.Button( "Save" )
@@ -48,11 +49,11 @@ class DRCDlg(Gtk.Dialog):
         name_store = Gtk.ListStore(int, str)
         p = subprocess.Popen(["aplay", "-l"], stdout=subprocess.PIPE)
         out, err = p.communicate()
-        print( "output from aplay : " + out )
+        print( "output from aplay : " + str(out) )
         #append all available audio devices
         #parse all card:X ... device:y ... to alsa devices
         pattern = re.compile('(\d):.*(\d):(.*)', re.MULTILINE)
-        self.alsaHardwareList = pattern.findall(out)
+        self.alsaHardwareList = pattern.findall(str(out))
         for i in range(0, len(self.alsaHardwareList)):
             name_store.append([ i, self.alsaHardwareList[i][2] ] )
         self.alsaHardwareCombo = Gtk.ComboBox.new_with_model_and_entry(name_store)
@@ -63,6 +64,9 @@ class DRCDlg(Gtk.Dialog):
 
         #TBC: connect to Gtk.Entry to insert_text event to do input validation
         self.entryFilterFile = LabeledEdit(self.vbox, "filter file", aCfg.filterFile )
+        openFileBtn = Gtk.Button( "Load filter" )
+        openFileBtn.connect( "clicked", self.openFilterFile )
+        self.vbox.add(openFileBtn)
         self.entryStartFreq = LabeledEdit(self.vbox, "start freq. [Hz]", str(aCfg.startFrequency) )
         self.entryEndFreq = LabeledEdit(self.vbox, "end freq. [Hz]", str(aCfg.endFrequency) )
         self.entrySweepDuration = LabeledEdit(self.vbox, "sweep duration. [s]", str(aCfg.sweepDuration) )
@@ -75,16 +79,30 @@ class DRCDlg(Gtk.Dialog):
         print("found pattern : ", self.alsaHardwareList, " alsa HW : ", self.getAlsaHardwareString())
 
     def slider_changed(self, hscale):
-    	self.sweep_level = hscale.get_value();
+        self.sweep_level = hscale.get_value();
+
+    def openFilterFile(self, param):
+        currFilter = self.entryFilterFile.entry.get_text()
+        currPath = os.path.split(currFilter)[0]
+        dlg = Gtk.FileChooserDialog("Open..", None, 0, (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+        try:
+            dlg.set_current_folder(currPath)
+            if dlg.run() == Gtk.ResponseType.OK:
+                self.entryFilterFile.entry.set_text( dlg.get_filename() )
+                self.parent.updateFilter(dlg.get_filename())
+        except Exception as inst:
+            print( 'filter not set',  sys.exc_info()[0], type(inst), inst )
+            pass
+        dlg.destroy()
 
     def on_apply_settings(self, some_param):
-        aCfg = Config()
+        aCfg = DRCConfig()
         aCfg.alsaDevice = self.getAlsaHardwareString()
         aCfg.filterFile = self.entryFilterFile.entry.get_text()
         aCfg.recordGain = self.sweep_level
-        aCfg.startFrequency = int( entryStartFreq.entry.get_text() )
-        aCfg.endFrequency = int( entryEndFreq.entry.get_text() )
-        aCfg.sweepDuration = int( entrySweepDuration.entry.get_text() )
+        aCfg.startFrequency = int( self.entryStartFreq.entry.get_text() )
+        aCfg.endFrequency = int( self.entryEndFreq.entry.get_text() )
+        aCfg.sweepDuration = int( self.entrySweepDuration.entry.get_text() )
         aCfg.save()
 
     def getAlsaHardwareString(self):
@@ -94,22 +112,22 @@ class DRCDlg(Gtk.Dialog):
         return alsaDevicePlaybackRecord
 
     def on_execMeasure(self):
-        aCfg = Config()        
+        aCfg = DRCConfig()
         #execute measure script to generate filters
         p = subprocess.Popen( [ "./measure1Channel", self.amplitude + ", " + aCfg.alsaDevice  + ", " + string(self.start_freq)  + ", " +  string(self.end_freq) + ", " +  self.measure_duration ], stdout=subprocess.PIPE)
         out, err = p.communicate()
         print( "output from measure script : " + out )
 
     def on_close(self, shell):
-        print "closing ui"
+        print( "closing ui")
         self.set_visible(False)
         return True
 
-    def show_ui(self, shell, state):
-        print "showing UI"
+    def show_ui(self, shell, state, dummy):
+        print("showing UI")
         self.show_all()
         self.present()
-        print "done showing UI"
+        print( "done showing UI" )
 
     def on_destroy(self, widget, data):
         self.on_close(None)
