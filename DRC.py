@@ -162,7 +162,7 @@ def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
         if floatSample > 1 or floatSample < -1:
             print( "detected value probably out of range : ", floatSample )
         #TODO: devided filter value by 500 because most filters seem to be too 'strong
-        filter_array.append( float(floatSample/500) )
+        filter_array.append( float(floatSample) )
         #if len(filter_array) == 128:
         #    break
         #dump the filter to check
