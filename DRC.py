@@ -18,7 +18,7 @@
 import os, sys, inspect, struct
 
 from gi.repository import GObject, Gst, Peas, RB, Gtk, Gdk, GdkPixbuf
-from DRCUi import DRCDlg
+from DRCUi import DRCDlg, LabeledEdit
 
 import DRC_rb3compat
 import math
@@ -40,6 +40,25 @@ ui_string="""
   </menubar>
 </ui>
 """
+
+class ChanelSelDlg(Gtk.Dialog):
+    def __init__(self, parent):
+        Gtk.Dialog.__init__(self, "select number of chanels in filter file", None, 0,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        self.parent = parent
+        self.set_deletable(False)
+        self.connect( "delete-event", self.on_destroy )
+        self.chanelEdit = LabeledEdit(self.vbox, "raw filter file detected; plesae select number of 32bit float chanels", "2" )
+        self.chanelEdit.entry.show()
+        self.chanelEdit.label.show()
+
+    def getNumChannels(self):
+        return int(self.chanelEdit.entry.get_text())
+
+    def on_destroy(self, widget, data):
+        self.on_close(None)
+        return True
 
 class WaveParams:
 
@@ -149,20 +168,19 @@ def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
     readData = filterFile.read( sampleByteSize )
     count = 0
     while len(readData) == sampleByteSize:
-        floatSample = float(0.0)
+        floatSample = 1.0
         for chanel in range(0, numChanels):
             #print("readData : " + str(len(readData)), str(readData) )
             #if chanel == 0:
-            floatSample = floatSample + struct.unpack( 'f', readData )[0]
+            floatSample = floatSample * struct.unpack( 'f', readData )[0]
             readData = filterFile.read( sampleByteSize )
-        floatSample = float(floatSample/numChanels)
         if math.isnan(floatSample):
             print( "value is NaN : resetting to 0" )
             floatSample = 0
         if floatSample > 1 or floatSample < -1:
             print( "detected value probably out of range : ", floatSample )
         #TODO: devided filter value by 500 because most filters seem to be too 'strong
-        filter_array.append( float(floatSample) )
+        filter_array.append( floatSample/250 )
         #if len(filter_array) == 128:
         #    break
         #dump the filter to check
@@ -191,7 +209,10 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             if fileExt == ".wav":
                 filter_array = LoadWaveFile(filterFileName)
             else:
-                filter_array = LoadRawFile(filterFileName, 1)
+                dlg = ChanelSelDlg(self)
+                if dlg.run() == Gtk.ResponseType.OK:
+                    filter_array = LoadRawFile(filterFileName, dlg.getNumChannels())
+                dlg.destroy()
             #pass the filter data to the fir filter
             #print inspect.getdoc( self.fir_filter )
             num_filter_coeff = len( filter_array )
