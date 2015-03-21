@@ -18,7 +18,7 @@
 import os, sys, inspect, struct
 
 from gi.repository import GObject, Gst, Peas, RB, Gtk, Gdk, GdkPixbuf
-from DRCUi import DRCDlg, LabeledEdit
+from DRCUi import DRCDlg, ChanelSelDlg
 
 import DRC_rb3compat
 import math
@@ -40,25 +40,6 @@ ui_string="""
   </menubar>
 </ui>
 """
-
-class ChanelSelDlg(Gtk.Dialog):
-    def __init__(self, parent):
-        Gtk.Dialog.__init__(self, "select number of chanels in filter file", None, 0,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-             Gtk.STOCK_OK, Gtk.ResponseType.OK))
-        self.parent = parent
-        self.set_deletable(False)
-        self.connect( "delete-event", self.on_destroy )
-        self.chanelEdit = LabeledEdit(self.vbox, "raw filter file detected; plesae select number of 32bit float chanels", "2" )
-        self.chanelEdit.entry.show()
-        self.chanelEdit.label.show()
-
-    def getNumChannels(self):
-        return int(self.chanelEdit.entry.get_text())
-
-    def on_destroy(self, widget, data):
-        self.on_close(None)
-        return True
 
 class WaveParams:
 
@@ -179,11 +160,10 @@ def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
             floatSample = 0
         if floatSample > 1 or floatSample < -1:
             print( "detected value probably out of range : ", floatSample )
-        #TODO: devided filter value by 500 because most filters seem to be too 'strong
-        filter_array.append( floatSample/250 )
-        #if len(filter_array) == 128:
-        #    break
-        #dump the filter to check
+        #TODO: check possibility to scale filter strength (configurable devisor etc...)
+        filter_array.append( floatSample )
+
+    #dump the filter to check
     #s = struct.pack('f'*len(filter_array), *filter_array)
     #f = open('/home/tobias/.local/share/rhythmbox/plugins/DRC/appliedFilter.raw','wb')
     #f.write(s)
@@ -203,6 +183,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
         super(DRCPlugin, self).__init__()
 
     def updateFilter(self, filterFileName):
+        filter_array = []
         if filterFileName != '':
             fileExt = os.path.splitext(filterFileName)[-1]
             print("ext = " + fileExt)
@@ -212,18 +193,18 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
                 dlg = ChanelSelDlg(self)
                 if dlg.run() == Gtk.ResponseType.OK:
                     filter_array = LoadRawFile(filterFileName, dlg.getNumChannels())
-                dlg.destroy()
             #pass the filter data to the fir filter
             #print inspect.getdoc( self.fir_filter )
-            num_filter_coeff = len( filter_array )
-        self.fir_filter.set_property( 'latency', int(num_filter_coeff /2) )
-        print( "num_filter_coeff", num_filter_coeff )
-        kernel = self.fir_filter.get_property('kernel')
-        #print( "kernel : ", kernel)
-        for i in range(0, num_filter_coeff):
-             kernel.append( filter_array[i] )
-             #print( filter_array[i] )
-        self.fir_filter.set_property('kernel', kernel)
+        num_filter_coeff = len( filter_array )
+        if num_filter_coeff > 0:
+            self.fir_filter.set_property( 'latency', int(num_filter_coeff /2) )
+            print( "num_filter_coeff", num_filter_coeff )
+            kernel = self.fir_filter.get_property('kernel')
+            #print( "kernel : ", kernel)
+            for i in range(0, num_filter_coeff):
+                kernel.append( filter_array[i] )
+                #print( filter_array[i] )
+            self.fir_filter.set_property('kernel', kernel)
 
     def do_activate(self):
         try:
