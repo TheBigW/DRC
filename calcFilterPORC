@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Get command line parameters
+IMPULSE_FILE="$1"
+FILTER_FILE="$2"
+DRC_CFG_FILE="$3"
+
+#going with flat target curve. param -t allows for target curve. e.g -t tact30f.txt
+
+echo "calculating filters"
+python porc.py --mixed  -n 6144 -o bin $IMPULSE_FILE $FILTER_FILE

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Get command line parameters
+IMPULSE_FILE="$1"
+FILTER_FILE="$2"
+DRC_CFG_FILE="$3"
+
+echo DRCCfgFile : $DRC_CFG_FILE
+echo "calculating filters"
+drc --BCInFile=$IMPULSE_FILE --PSOutFile=$FILTER_FILE --TCOutFile=test.pcm "${DRC_CFG_FILE}"
