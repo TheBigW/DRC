@@ -32,7 +32,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="button1">
+              <object class="GtkButton" id="cancelButton">
                 <property name="label">gtk-cancel</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -133,7 +133,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkEntry" id="entryFrequency">
+                          <object class="GtkEntry" id="entryStartFrequency">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="text" translatable="yes">20</property>
@@ -157,7 +157,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkEntry" id="entry1">
+                          <object class="GtkEntry" id="entryEndFrequency">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="text" translatable="yes">20000</property>
