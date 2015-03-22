@@ -14,14 +14,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
-from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, Gst
+from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, Gst, RB
 import os, sys, inspect, subprocess, re
 from DRCConfig import DRCConfig
+import rb
 
-class ChanelSelDlg:
+class ChanelSelDlg():
     def __init__(self, parent):
         self.uibuilder = Gtk.Builder()
-        self.uibuilder.add_from_file("DRCUI.glade")
+        self.uibuilder.add_from_file(rb.find_plugin_file(parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("channel_no_dlg")
         okBtn = self.uibuilder.get_object("button_OK")
         okBtn.connect( "clicked", self.on_Ok )
@@ -52,38 +53,29 @@ def getDeviceListFromAlsaOutput( command ):
     print("found pattern : " + str(alsaHardwareList) )
     return alsaHardwareList
 
-def getNameStoreFromHardwareList(alsaHardwareList):
-    name_store = Gtk.ListStore(int, str)
-    for i in range(0, len(alsaHardwareList)):
-        name_store.append([ i, alsaHardwareList[i][1] + ": " + alsaHardwareList[i][3]])
-    return name_store
-
 def fillComboFromDeviceList(combo, alsaHardwareList):
     for i in range(0, len(alsaHardwareList)):
         combo.append_text( alsaHardwareList[i][1] + ": " + alsaHardwareList[i][3] )
+    combo.set_active(0)
 
-def createDeviceCombo( command, label, vbox ):
-    result = getDeviceListFromAlsaOutput(command)
-    name_store = getNameStoreFromHardwareList(result)
-    alsaPlayHardwareList = result[0]
-    alsaPlayHardwareCombo = Gtk.ComboBox.new_with_model_and_entry(name_store)
-    alsaPlayHardwareCombo.set_entry_text_column(1)
-    vbox.add( Gtk.Label( label ) )
-    alsaPlayHardwareCombo.set_active(0)
-    vbox.add(alsaPlayHardwareCombo)
-    return [alsaPlayHardwareCombo, alsaPlayHardwareList]
-
-class DRCDlg:#(Gtk.Dialog):
+class DRCDlg:
     def __init__(self, parent):
         #super(Gtk.Dialog, self).__init__()
         self.parent = parent
         aCfg = DRCConfig()
         self.uibuilder = Gtk.Builder()
-        self.uibuilder.add_from_file("DRCUI.glade")
+        self.uibuilder.add_from_file( rb.find_plugin_file(parent, "DRCUI.glade") )
         self.dlg = self.uibuilder.get_object("DRCDlg")
         self.filechooserbtn = self.uibuilder.get_object("drcfilterchooserbutton")
         self.filechooserbtn.set_filename(aCfg.filterFile)
-        self.filechooserbtn.connect("selection-changed", self.on_file_selected)
+        self.filechooserbtn.connect("file-set", self.on_file_selected)
+
+        self.entryStartFrequency = self.uibuilder.get_object("entryStartFrequency")
+        self.entryEndFrequency = self.uibuilder.get_object("entryEndFrequency")
+        self.entrySweepDuration = self.uibuilder.get_object("entrySweepDuration")
+        self.entryStartFrequency.set_text( str(aCfg.startFrequency) )
+        self.entryEndFrequency.set_text( str(aCfg.endFrequency) )
+        self.entrySweepDuration.set_text( str(aCfg.sweepDuration) )
 
         self.alsaPlayHardwareCombo = self.uibuilder.get_object("comboOutput")
         self.alsaRecHardwareCombo = self.uibuilder.get_object("comboRecord")
@@ -92,6 +84,9 @@ class DRCDlg:#(Gtk.Dialog):
         self.alsaRecHardwareList = getDeviceListFromAlsaOutput("arecord")
         fillComboFromDeviceList(self.alsaPlayHardwareCombo, self.alsaPlayHardwareList)
         fillComboFromDeviceList( self.alsaRecHardwareCombo, self.alsaRecHardwareList)
+
+        execMeasureBtn = self.uibuilder.get_object("buttonMeassure")
+        execMeasureBtn.connect( "clicked", self.on_execMeasure )
 
         calcDRCBtn = self.uibuilder.get_object("buttonCalculateFilter")
         calcDRCBtn.connect( "clicked", self.on_calculateDRC )
@@ -107,27 +102,44 @@ class DRCDlg:#(Gtk.Dialog):
         apply_closeBtn.connect( "clicked", self.on_apply_settings )
         print(" alsa play HW : ", self.getAlsaPlayHardwareString())
 
+        cancel_closeBtn = self.uibuilder.get_object("cancelButton")
+        cancel_closeBtn.connect( "clicked", self.on_Cancel )
+
+
         self.comboDRC = self.uibuilder.get_object("combo_drc_type")
         #TODO: check availibility of PORC & DRC and fill combo accordingly
         self.comboDRC.append_text("DRC")
         self.comboDRC.append_text("PORC")
+        self.comboDRC.set_active(0)
 
     def slider_changed(self, hscale):
         self.sweep_level = hscale.get_value();
 
     def on_file_selected(self, widget):
         self.DrcFilename= widget.get_filename()
-        self.parent.updateFilter(self.DrcFilename)
+        fileExt = os.path.splitext(self.DrcFilename)[-1]
+        numChanels = None
+        print("ext = " + fileExt)
+        if fileExt != ".wav":
+            dlg = ChanelSelDlg(self.parent)
+            if dlg.run() == Gtk.ResponseType.OK:
+                numChanels = dlg.getNumChannels()
+        self.parent.updateFilter(self.DrcFilename, numChanels)
+        self.saveSettings(numChanels)
 
-    def on_apply_settings(self, some_param):
+    def saveSettings(self, numChanels=None):
         aCfg = DRCConfig()
-        aCfg.alsaDevice = self.getAlsaHardwareString()
         aCfg.filterFile = self.DrcFilename
         aCfg.recordGain = self.sweep_level
-        aCfg.startFrequency = int( self.entryStartFreq.entry.get_text() )
-        aCfg.endFrequency = int( self.entryEndFreq.entry.get_text() )
-        aCfg.sweepDuration = int( self.entrySweepDuration.entry.get_text() )
+        aCfg.startFrequency = int( self.entryStartFrequency.get_text() )
+        aCfg.endFrequency = int( self.entryEndFrequency.get_text() )
+        aCfg.sweepDuration = int( self.entrySweepDuration.get_text() )
+        if numChanels != None:
+            aCfg.numFilterChanels = numChanels
         aCfg.save()
+    def on_apply_settings(self, some_param):
+        self.saveSettings()
+        self.dlg.set_visible(False)
 
     def getAlsaPlayHardwareString(self):
         if len(self.alsaPlayHardwareList) < 1:
@@ -144,44 +156,50 @@ class DRCDlg:#(Gtk.Dialog):
             return
         alsHardwareSelIndex = self.alsaRecHardwareCombo.get_active()
         alsaDeviceRec = "hw:" + str(self.alsaRecHardwareList[alsHardwareSelIndex][0]) + "," + str(self.alsaRecHardwareList[alsHardwareSelIndex][2])
-        print("alsa output device : " + alsaDeviceRec)
+        print("alsa input device : " + alsaDeviceRec)
         return alsaDeviceRec
 
-    def on_execMeasure(self):
-        aCfg = DRCConfig()
-        impOutputFile = "./impulse_resp.pcm"
+    def on_execMeasure(self, param):
+        gladeFilePath = rb.find_plugin_file(self.parent, "DRCUI.glade")
+        #pluginPath = os.path.dirname(os.path.abspath(gladeFilePath ))
+        scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
+        impOutputFile = "impOutputFile.pcm"
         #execute measure script to generate filters
-        p = subprocess.Popen( [ "./measure1Channel",\
-                                self.amplitude + " " +\
-                                self.getAlsaPlayHardwareString()  + " " +\
-                                self.getAlsaRecordHardwareString() +\
-                                str(self.start_freq)  + " " +\
-                                str(self.end_freq) + " " +\
-                                self.measure_duration + " " +\
-                                impOutputFile], stdout=subprocess.PIPE)
+        commandLine = [scriptName, str(self.sweep_level),
+                                self.getAlsaRecordHardwareString(),
+                                self.getAlsaPlayHardwareString(),
+                                str(self.entryStartFrequency.get_text()),
+                                str(self.entryEndFrequency.get_text()),
+                                str(self.entrySweepDuration.get_text()),
+                                impOutputFile]
+        p = subprocess.Popen(commandLine, stdout=subprocess.PIPE)
         out, err = p.communicate()
-        print( "output from measure script : " + out )
+        print( "output from measure script : " + str(out) )
         #TODO: check for errors
         self.uibuilder.get_object("impResponseFileChooserBtn").set_filename(impOutputFile)
 
-    def on_calculateDRC(self):
-        drcMethod = self.comboDRC.get_text()
-        drcScript = "./calcFilterDRC"
-        costumParams = ""
+    def on_calculateDRC(self, param):
+        drcMethod = self.comboDRC.get_active_text()
+        drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
+        filterResultFile = "Filter" + str(drcMethod) + ".pcm"
+        impResponseFileChooserBtn = self.uibuilder.get_object("impResponseFileChooserBtn")
         if drcMethod == "DRC":
-            drcScript = "./calcFilterDRC"
-            costumParams =  "/usr/share/drc/config/44.1 kHz/erb-44.1.drc"
+            drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
+            drcScript.append(impResponseFileChooserBtn.get_filename())
+            drcScript.append(filterResultFile)
+            #TODO: copy cfg file locally and fill in all parameters, open file - search/replace
+            drcScript.append(r"/usr/share/drc/config/44.1 kHz/erb-44.1.drc")
+            #TODO: check for drc cfg file existence or make configurable
         elif drcMethod == "PORC":
-            drcScript = "./calcFilterPORC"
+            drcScript = [rb.find_plugin_file(self.parent, "calcFilterPORC")]
         #execute measure script to generate filters
-        filterResultFile = "Filter" + drcMethod.pcm
-        p = subprocess.Popen( [ drcScript, self.impResponseFileChooserBtn + " " + filterResultFile + " " + costumParams], stdout=subprocess.PIPE)
+        p = subprocess.Popen( drcScript, stdout=subprocess.PIPE)
         out, err = p.communicate()
-        print( "output from filter calculate script : " + out )
+        print( "output from filter calculate script : " + str(out) )
 
     def on_close(self, shell):
         print( "closing ui")
-        self.set_visible(False)
+        self.dlg.set_visible(False)
         return True
 
     def show_ui(self, shell, state, dummy):
@@ -193,3 +211,6 @@ class DRCDlg:#(Gtk.Dialog):
     def on_destroy(self, widget, data):
         self.on_close(None)
         return True
+
+    def on_Cancel(self, some_param):
+        self.dlg.set_visible(False)

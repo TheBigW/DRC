@@ -18,7 +18,7 @@
 import os, sys, inspect, struct
 
 from gi.repository import GObject, Gst, Peas, RB, Gtk, Gdk, GdkPixbuf
-from DRCUi import DRCDlg, ChanelSelDlg
+from DRCUi import DRCDlg
 
 import DRC_rb3compat
 import math
@@ -182,7 +182,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
     def __init__(self):
         super(DRCPlugin, self).__init__()
 
-    def updateFilter(self, filterFileName):
+    def updateFilter(self, filterFileName, numChannels = None):
         filter_array = []
         if filterFileName != '':
             fileExt = os.path.splitext(filterFileName)[-1]
@@ -190,9 +190,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             if fileExt == ".wav":
                 filter_array = LoadWaveFile(filterFileName)
             else:
-                dlg = ChanelSelDlg(self)
-                if dlg.run() == Gtk.ResponseType.OK:
-                    filter_array = LoadRawFile(filterFileName, dlg.getNumChannels())
+                filter_array = LoadRawFile(filterFileName, numChannels)
             #pass the filter data to the fir filter
             #print inspect.getdoc( self.fir_filter )
         num_filter_coeff = len( filter_array )
@@ -216,7 +214,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             print( "audiofirfilter :" + str(self.fir_filter) )
             #open filter files
             aCfg = DRCConfig()
-            self.updateFilter(aCfg.filterFile)
+            self.updateFilter(aCfg.filterFile, aCfg.numChanels)
             #print( inspect.getdoc( kernel ) )
             self.set_filter()
             print( "filter succesfully set" )
@@ -269,7 +267,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             return
         genre = entry.get_string(RB.RhythmDBPropType.GENRE)
         print( "genre : ", str(genre) )
-         #print( entry.get_string(RB.RhythmDBPropType.ALBUM) )
+        #print( entry.get_string(RB.RhythmDBPropType.ALBUM) )
         #print( entry.get_string(RB.RhythmDBPropType.TITLE) )
 
     def find_file(self, filename):
