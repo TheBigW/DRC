@@ -105,6 +105,8 @@ class DRCDlg:
         cancel_closeBtn = self.uibuilder.get_object("cancelButton")
         cancel_closeBtn.connect( "clicked", self.on_Cancel )
 
+        #TODO set path to some cfg Dir in users Home .... .set_pathname()
+        self.impResponseFileChooserBtn = self.uibuilder.get_object("impResponseFileChooserBtn")
 
         self.comboDRC = self.uibuilder.get_object("combo_drc_type")
         #TODO: check availibility of PORC & DRC and fill combo accordingly
@@ -160,7 +162,7 @@ class DRCDlg:
         return alsaDeviceRec
 
     def on_execMeasure(self, param):
-        gladeFilePath = rb.find_plugin_file(self.parent, "DRCUI.glade")
+        #gladeFilePath = rb.find_plugin_file(self.parent, "DRCUI.glade")
         #pluginPath = os.path.dirname(os.path.abspath(gladeFilePath ))
         scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
         impOutputFile = "impOutputFile.pcm"
@@ -178,21 +180,53 @@ class DRCDlg:
         #TODO: check for errors
         self.uibuilder.get_object("impResponseFileChooserBtn").set_filename(impOutputFile)
 
+    def changeCfgParamDRC(self, bufferStr, changeArray):
+        newBuff = bufferStr
+        for i in range(0,len(changeArray)):
+            changeParams = changeArray[i]
+            searchStr = changeParams[0] + " = "
+            paramStart = bufferStr.find( searchStr )
+            if paramStart > -1:
+                paramEnd = bufferStr.find( "\n", paramStart )
+                if paramEnd > -1:
+                    newBuff = bufferStr[0:paramStart + len(searchStr)] + changeParams[1] + bufferStr[paramEnd:(len(bufferStr)-1)]
+            bufferStr = newBuff
+        return newBuff
+
     def on_calculateDRC(self, param):
         drcMethod = self.comboDRC.get_active_text()
         drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
         filterResultFile = "Filter" + str(drcMethod) + ".pcm"
-        impResponseFileChooserBtn = self.uibuilder.get_object("impResponseFileChooserBtn")
+        impRespFile = self.impResponseFileChooserBtn.get_filename()
+        if impRespFile == None:
+            dlg = Gtk.MessageDialog(self.dlg, Gtk.DialogFlags.MODAL, Gtk.MessageType.INFO, Gtk.ButtonsType.CLOSE, "no file loaded")
+            dlg.run()
+            dlg .destroy()
+            return
         if drcMethod == "DRC":
             drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
-            drcScript.append(impResponseFileChooserBtn.get_filename())
+            drcScript.append(impRespFile)
             drcScript.append(filterResultFile)
-            #TODO: copy cfg file locally and fill in all parameters, open file - search/replace
-            drcScript.append(r"/usr/share/drc/config/44.1 kHz/erb-44.1.drc")
+            srcCfgFilesPath = rb.find_plugin_file(self.parent, "DRCFiles")
+            drcCfgFile =  srcCfgFilesPath + "/erb44100.drc"
+            gladeFilePath = rb.find_plugin_file(self.parent, "DRCUI.glade")
+            pluginPath = os.path.dirname(os.path.abspath(gladeFilePath ))
+            drcScript.append( drcCfgFile )
+            print("drcCfgFile : " + drcCfgFile )
+            os.chdir(pluginPath)
+            #update filter file
+            srcDrcCfgFile = open( drcCfgFile, "r" )
+            srcData = srcDrcCfgFile.read()
+            srcDrcCfgFile.close()
+            destData = self.changeCfgParamDRC(srcData, [["BCInFile", impRespFile], ["PSPointsFile", srcCfgFilesPath + "/pa-44100.txt"]])
+            destDrcCfgFile = open( drcCfgFile, "w" )
+            destDrcCfgFile.write(destData)
+            destDrcCfgFile.close()
             #TODO: check for drc cfg file existence or make configurable
         elif drcMethod == "PORC":
             drcScript = [rb.find_plugin_file(self.parent, "calcFilterPORC")]
         #execute measure script to generate filters
+        print( "drc command line: " + str(drcScript) )
         p = subprocess.Popen( drcScript, stdout=subprocess.PIPE)
         out, err = p.communicate()
         print( "output from filter calculate script : " + str(out) )

@@ -132,11 +132,8 @@ def PrintWavHeader(strWAVFile):
     return params
 
 def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
-    #print(os.getcwd() + "\n")
     print("numChanels : ", numChanels)
     filterFile = open( filename, "rb" )
-    #filter_data_right = open( aCfg.filterFile, "r" )
-    #read the pcm data as 32 bit float
     filter_array = []
     filterFile.seek(offset)
     #debug
