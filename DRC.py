@@ -150,7 +150,7 @@ def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
         for chanel in range(0, numChanels):
             #print("readData : " + str(len(readData)), str(readData) )
             #if chanel == 0:
-            floatSample = floatSample * struct.unpack( 'f', readData )[0]
+            floatSample = floatSample + struct.unpack( 'f', readData )[0]
             readData = filterFile.read( sampleByteSize )
         if math.isnan(floatSample):
             print( "value is NaN : resetting to 0" )
@@ -158,7 +158,7 @@ def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
         if floatSample > 1 or floatSample < -1:
             print( "detected value probably out of range : ", floatSample )
         #TODO: check possibility to scale filter strength (configurable devisor etc...)
-        filter_array.append( floatSample )
+        filter_array.append( floatSample/numChanels )
 
     #dump the filter to check
     #s = struct.pack('f'*len(filter_array), *filter_array)

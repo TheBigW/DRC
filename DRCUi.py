@@ -118,20 +118,20 @@ class DRCDlg:
         self.sweep_level = hscale.get_value();
 
     def on_file_selected(self, widget):
-        self.DrcFilename= widget.get_filename()
-        fileExt = os.path.splitext(self.DrcFilename)[-1]
+        DrcFilename= widget.get_filename()
+        fileExt = os.path.splitext(DrcFilename)[-1]
         numChanels = None
         print("ext = " + fileExt)
         if fileExt != ".wav":
             dlg = ChanelSelDlg(self.parent)
             if dlg.run() == Gtk.ResponseType.OK:
                 numChanels = dlg.getNumChannels()
-        self.parent.updateFilter(self.DrcFilename, numChanels)
+        self.parent.updateFilter(DrcFilename, numChanels)
         self.saveSettings(numChanels)
 
     def saveSettings(self, numChanels=None):
         aCfg = DRCConfig()
-        aCfg.filterFile = self.DrcFilename
+        aCfg.filterFile = self.filechooserbtn.get_filename()
         aCfg.recordGain = self.sweep_level
         aCfg.startFrequency = int( self.entryStartFrequency.get_text() )
         aCfg.endFrequency = int( self.entryEndFrequency.get_text() )
@@ -189,43 +189,52 @@ class DRCDlg:
             if paramStart > -1:
                 paramEnd = bufferStr.find( "\n", paramStart )
                 if paramEnd > -1:
-                    newBuff = bufferStr[0:paramStart + len(searchStr)] + changeParams[1] + bufferStr[paramEnd:(len(bufferStr)-1)]
+                    newBuff = bufferStr[0:paramStart + len(searchStr)] + changeParams[1] + bufferStr[paramEnd:len(bufferStr)]
             bufferStr = newBuff
         return newBuff
 
+    def prepareDRC( self, impRespFile, filterResultFile ):
+        drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
+        srcCfgFilesPath = rb.find_plugin_file(self.parent, "DRCFiles")
+        drcCfgFile =  srcCfgFilesPath + "/erb44100.drc"
+        drcScript.append( drcCfgFile )
+        print("drcCfgFile : " + drcCfgFile )
+        #update filter file
+        srcDrcCfgFile = open( drcCfgFile, "r" )
+        srcData = srcDrcCfgFile.read()
+        srcDrcCfgFile.close()
+        #TODO:add mic compensation
+        destData = self.changeCfgParamDRC(srcData, [["BCInFile", impRespFile], ["PSPointsFile", srcCfgFilesPath + "/pa-44100.txt"]])
+        destDrcCfgFile = open( drcCfgFile, "w" )
+        destDrcCfgFile.write(destData)
+        destDrcCfgFile.close()
+        return drcScript
+
+    def showMsgBox(self, msg):
+        dlg = Gtk.MessageDialog(self.dlg, Gtk.DialogFlags.MODAL, Gtk.MessageType.INFO, Gtk.ButtonsType.CLOSE, msg)
+        dlg.run()
+        dlg .destroy()
     def on_calculateDRC(self, param):
         drcMethod = self.comboDRC.get_active_text()
         drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
+        pluginPath = os.path.dirname(os.path.abspath(drcScript[0] ))
         filterResultFile = "Filter" + str(drcMethod) + ".pcm"
         impRespFile = self.impResponseFileChooserBtn.get_filename()
         if impRespFile == None:
-            dlg = Gtk.MessageDialog(self.dlg, Gtk.DialogFlags.MODAL, Gtk.MessageType.INFO, Gtk.ButtonsType.CLOSE, "no file loaded")
-            dlg.run()
-            dlg .destroy()
+            self.showMsgBox("no file loaded")
             return
         if drcMethod == "DRC":
-            drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
-            drcScript.append(impRespFile)
-            drcScript.append(filterResultFile)
-            srcCfgFilesPath = rb.find_plugin_file(self.parent, "DRCFiles")
-            drcCfgFile =  srcCfgFilesPath + "/erb44100.drc"
-            gladeFilePath = rb.find_plugin_file(self.parent, "DRCUI.glade")
-            pluginPath = os.path.dirname(os.path.abspath(gladeFilePath ))
-            drcScript.append( drcCfgFile )
-            print("drcCfgFile : " + drcCfgFile )
-            os.chdir(pluginPath)
-            #update filter file
-            srcDrcCfgFile = open( drcCfgFile, "r" )
-            srcData = srcDrcCfgFile.read()
-            srcDrcCfgFile.close()
-            destData = self.changeCfgParamDRC(srcData, [["BCInFile", impRespFile], ["PSPointsFile", srcCfgFilesPath + "/pa-44100.txt"]])
-            destDrcCfgFile = open( drcCfgFile, "w" )
-            destDrcCfgFile.write(destData)
-            destDrcCfgFile.close()
-            #TODO: check for drc cfg file existence or make configurable
+            drcScript = self.prepareDRC(impRespFile,filterResultFile)
         elif drcMethod == "PORC":
             drcScript = [rb.find_plugin_file(self.parent, "calcFilterPORC")]
+            porcCommand = pluginPath+"/porc/porc.py"
+            if not os.path.isfile(porcCommand):
+                self.showMsgBox("porc.py not found. Please download from github and install in the DRC plugin subfolder 'porc'")
+            drcScript.append()
         #execute measure script to generate filters
+        #last 2 parameters for all scripts allways impulse response and result filter
+        drcScript.append(impRespFile)
+        drcScript.append(filterResultFile)
         print( "drc command line: " + str(drcScript) )
         p = subprocess.Popen( drcScript, stdout=subprocess.PIPE)
         out, err = p.communicate()

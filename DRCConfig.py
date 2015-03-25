@@ -44,7 +44,7 @@ class DRCConfig:
 			self.numFilterChanels = 1
 	def save( self ):
 		conf = GConf.Client.get_default()
-		conf.set_string( DRC_GCONF_BASE_PATH + '/filterFile', self.filterFile )
+		conf.set_string( DRC_GCONF_BASE_PATH + '/filterFile', self.filterFile if self.filterFile != None else "")
 		conf.set_int( DRC_GCONF_BASE_PATH + '/numFilterChanels', self.numFilterChanels )
 		conf.set_float( DRC_GCONF_BASE_PATH + '/recordGain', self.recordGain )
 		conf.set_int( DRC_GCONF_BASE_PATH + '/startFrequency', self.startFrequency )
