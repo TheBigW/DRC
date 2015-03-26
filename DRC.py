@@ -23,6 +23,7 @@ from DRCUi import DRCDlg
 import DRC_rb3compat
 import math
 import wave
+from array import array
 from DRC_rb3compat import ActionGroup
 from DRC_rb3compat import Action
 from DRC_rb3compat import ApplicationShell
@@ -131,40 +132,44 @@ def PrintWavHeader(strWAVFile):
     params.sampleByteSize = int(stHeaderFields['BitsPerSample']/8)
     return params
 
+def debugDumpAppliedFilter(filter_array):
+    #s = struct.pack('f'*len(filter_array), *filter_array)
+    f = open('/home/tobias/.local/share/rhythmbox/plugins/DRC/appliedFilter.raw','wb')
+    #f.write(s)
+    float_array = array('f', filter_array)
+    float_array.tofile(f)
+    f.close()
+    #dump textual representation too
+    theFile = open('/home/tobias/.local/share/rhythmbox/plugins/DRC/appliedFilter.txt','w')
+    for item in filter_array:
+        theFile.write("%s\n" % item)
+    theFile.close()
+
+
 def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
     print("numChanels : ", numChanels)
     filterFile = open( filename, "rb" )
     filter_array = []
     filterFile.seek(offset)
-    #debug
-    #tmpData = filterFile.read()
-    #filterFile.seek(offset)
-    #tmpFilterFileName = "/home/tobias/.local/share/rhythmbox/plugins/DRC/tmpFilter.raw"
-    #tmpFilterFile = open( tmpFilterFileName, "wb" )
-    #tmpFilterFile.write(tmpData)
-    #end debug
     readData = filterFile.read( sampleByteSize )
     count = 0
     while len(readData) == sampleByteSize:
-        floatSample = 1.0
+        floatSample = 0.0
         for chanel in range(0, numChanels):
-            #print("readData : " + str(len(readData)), str(readData) )
-            #if chanel == 0:
             floatSample = floatSample + struct.unpack( 'f', readData )[0]
-            readData = filterFile.read( sampleByteSize )
+        readData = filterFile.read( sampleByteSize )
         if math.isnan(floatSample):
             print( "value is NaN : resetting to 0" )
             floatSample = 0
-        if floatSample > 1 or floatSample < -1:
+            return None
+        if floatSample > (1*numChanels) or floatSample < (-1*numChanels):
             print( "detected value probably out of range : ", floatSample )
+            return None
         #TODO: check possibility to scale filter strength (configurable devisor etc...)
         filter_array.append( floatSample/numChanels )
 
     #dump the filter to check
-    #s = struct.pack('f'*len(filter_array), *filter_array)
-    #f = open('/home/tobias/.local/share/rhythmbox/plugins/DRC/appliedFilter.raw','wb')
-    #f.write(s)
-    #f.close()
+    #debugDumpAppliedFilter(filter_array)
     return filter_array
 
 def LoadWaveFile(filename):
@@ -192,7 +197,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             #print inspect.getdoc( self.fir_filter )
         num_filter_coeff = len( filter_array )
         if num_filter_coeff > 0:
-            self.fir_filter.set_property( 'latency', int(num_filter_coeff /2) )
+            self.fir_filter.set_property( 'latency', 0 )#int(num_filter_coeff /2) )
             print( "num_filter_coeff", num_filter_coeff )
             kernel = self.fir_filter.get_property('kernel')
             #print( "kernel : ", kernel)
@@ -208,10 +213,10 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             self.player = self.shell_player.props.player
             #audioiirfilter
             self.fir_filter = Gst.ElementFactory.make('audiofirfilter', 'MyFIRFilter')
-            print( "audiofirfilter :" + str(self.fir_filter) )
+            #print( "audiofirfilter :" + str(self.fir_filter) )
             #open filter files
             aCfg = DRCConfig()
-            self.updateFilter(aCfg.filterFile, aCfg.numChanels)
+            self.updateFilter(aCfg.filterFile, aCfg.numFilterChanels)
             #print( inspect.getdoc( kernel ) )
             self.set_filter()
             print( "filter succesfully set" )
