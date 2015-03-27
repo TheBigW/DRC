@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, Gst, RB
 import os, sys, inspect, subprocess, re
+import datetime
 from DRCConfig import DRCConfig
 import rb
 
@@ -69,6 +70,7 @@ class DRCDlg:
         self.filechooserbtn = self.uibuilder.get_object("drcfilterchooserbutton")
         self.filechooserbtn.set_filename(aCfg.filterFile)
         self.filechooserbtn.connect("file-set", self.on_file_selected)
+        self.filechooserbtn.set_current_folder( self.getFilterResultsDir() )
 
         self.entryStartFrequency = self.uibuilder.get_object("entryStartFrequency")
         self.entryEndFrequency = self.uibuilder.get_object("entryEndFrequency")
@@ -105,8 +107,8 @@ class DRCDlg:
         cancel_closeBtn = self.uibuilder.get_object("cancelButton")
         cancel_closeBtn.connect( "clicked", self.on_Cancel )
 
-        #TODO set path to some cfg Dir in users Home .... .set_pathname()
         self.impResponseFileChooserBtn = self.uibuilder.get_object("impResponseFileChooserBtn")
+        self.impResponseFileChooserBtn.set_current_folder( self.getMeasureResultsDir() )
 
         self.comboDRC = self.uibuilder.get_object("combo_drc_type")
         #TODO: check availibility of PORC & DRC and fill combo accordingly
@@ -161,11 +163,16 @@ class DRCDlg:
         print("alsa input device : " + alsaDeviceRec)
         return alsaDeviceRec
 
+    def getMeasureResultsDir(self):
+        cachedir = RB.user_cache_dir() + "/DRC"
+        measureResultsDir = cachedir + "/MeasureResults"
+        if not os.path.exists(measureResultsDir):
+            os.makedirs(measureResultsDir)
+        return measureResultsDir
+
     def on_execMeasure(self, param):
-        #gladeFilePath = rb.find_plugin_file(self.parent, "DRCUI.glade")
-        #pluginPath = os.path.dirname(os.path.abspath(gladeFilePath ))
         scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
-        impOutputFile = "impOutputFile.pcm"
+        impOutputFile = self.getMeasureResultsDir() + "/impOutputFile" + datetime.datetime.now().strftime("%Y%m%d%H%M%S") +".pcm"
         #execute measure script to generate filters
         commandLine = [scriptName, str(self.sweep_level),
                                 self.getAlsaRecordHardwareString(),
@@ -214,11 +221,19 @@ class DRCDlg:
         dlg = Gtk.MessageDialog(self.dlg, Gtk.DialogFlags.MODAL, Gtk.MessageType.INFO, Gtk.ButtonsType.CLOSE, msg)
         dlg.run()
         dlg .destroy()
+
+    def getFilterResultsDir(self):
+        cachedir = RB.user_cache_dir() + "/DRC"
+        filterResultsDir = cachedir + "/DRCFilters"
+        if not os.path.exists(filterResultsDir):
+            os.makedirs(filterResultsDir)
+        return filterResultsDir
+
     def on_calculateDRC(self, param):
         drcMethod = self.comboDRC.get_active_text()
         drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
         pluginPath = os.path.dirname(os.path.abspath(drcScript[0] ))
-        filterResultFile = "Filter" + str(drcMethod) + ".pcm"
+        filterResultFile = self.getFilterResultsDir() + "/Filter" + str(drcMethod) + datetime.datetime.now().strftime("%Y%m%d%H%M%S") +".pcm"
         impRespFile = self.impResponseFileChooserBtn.get_filename()
         if impRespFile == None:
             self.showMsgBox("no file loaded")
@@ -239,6 +254,7 @@ class DRCDlg:
         p = subprocess.Popen( drcScript, stdout=subprocess.PIPE)
         out, err = p.communicate()
         print( "output from filter calculate script : " + str(out) )
+        self.filechooserbtn.set_filename(filterResultFile)
 
     def on_close(self, shell):
         print( "closing ui")
