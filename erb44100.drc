@@ -1,0 +1,225 @@
+# ERB scale approximation correction settings
+# The approximation is pretty accurate
+# The approximation has been computed considering:
+#  df * dt = 2
+# i.e. four time the Gabor limit. This is an estimation
+# of the real resolution achieved by the frequency
+# dependent windowing applied.
+
+# ERB appoximation windowind (65 ms at 20 Hz, 48.5 ms at 100 Hz, 12.6 ms at 1 KHz, 0.46 ms at 20 KHz)
+# Normal peak limiting (6.02 dB Max)
+# Minimum phase excess phase allpass recovering to reduce pre-echo
+# Normal pre-echo truncation
+# Minimum phase postfiltering to reduce I/O latency
+# ERB approximation ringing truncation
+
+# Base file directory
+# BCBaseDir = /usr/share/drc/
+
+# BC = Base Configuration
+BCInFile = /home/tobias/.cache/rhythmbox/DRC/MeasureResults/impOutputFile20150327085318.pcm
+BCSampleRate = 44100
+BCInFileType = F
+BCImpulseCenterMode = A
+BCImpulseCenter = 0
+BCInitWindow = 131072
+BCPreWindowLen = 1024
+BCPreWindowGap = 768
+BCNormFactor = 0.0
+BCNormType = E
+
+# MC = Mic compensation stage
+MCFilterType = N
+MCInterpolationType = H
+MCMultExponent = 3
+MCFilterLen = 65535
+MCNumPoints = 0
+MCPointsFile = wm-61a.txt
+MCMagType = D
+# MCFilterFile = rmcf.pcm
+MCFilterFileType = F
+MCOutWindow = 0
+MCNormFactor = 0.0
+MCNormType = E
+# MCOutFile = rmc.pcm
+MCOutFileType = F
+
+# Base configuration dip limiting stage
+BCDLType = L
+BCDLMinGain = 1e-6 # -120.0 dB Min, just to prevent overflow/underflow problems
+BCDLStartFreq = 20
+BCDLEndFreq = 20000
+BCDLStart = 0.75
+BCDLMultExponent = 3
+
+# HD = Homomorphic Deconvolution
+HDMultExponent = 4
+
+HDMPNormFactor = 1.0
+HDMPNormType = E
+# HDMPOutFile = rmp.pcm
+HDMPOutFileType = F
+
+HDEPNormFactor = 1.0
+HDEPNormType = E
+# HDEPOutFile = rep.pcm
+HDEPOutFileType = F
+
+# MP = Minimum phase frequency dependent windowing
+MPPrefilterType = s
+MPPrefilterFctn = B
+MPWindowGap = 40
+MPLowerWindow = 5734 # 65 ms
+MPUpperWindow = 40 # 0.46 ms
+MPStartFreq = 20
+MPEndFreq = 20000
+MPFilterLen = 65536
+MPFSharpness = 0.25
+MPBandSplit = 3
+MPWindowExponent = 1.87
+MPHDRecover = Y
+MPEPPreserve = Y
+MPHDMultExponent = 3
+MPPFFinalWindow = 5734
+MPPFNormFactor = 0.0
+MPPFNormType = E
+# MPPFOutFile = rmppf.pcm
+MPPFOutFileType = F
+
+# DL = Dip limiting stage
+DLType = M
+DLMinGain = 0.01 # -40.0 dB Min
+DLStartFreq = 20
+DLEndFreq = 20000
+DLStart = 0.75
+DLMultExponent = 3
+
+# EP = Excess phase frequency dependent windowing
+EPPrefilterType = s
+EPPrefilterFctn = B
+EPWindowGap = 40
+EPLowerWindow = 1836 # 21.3 ms
+EPUpperWindow = 40 # 0.46 ms
+EPStartFreq = 20
+EPEndFreq = 20000
+EPFilterLen = 65536
+EPFSharpness = 0.25
+EPBandSplit = 3
+EPWindowExponent = 1.0
+EPPFFlatGain = 1.0
+EPPFOGainFactor = 0.0
+EPPFFlatType = M
+EPPFFGMultExponent = 3
+EPPFFinalWindow = 1836
+EPPFNormFactor = 0.0
+EPPFNormType = E
+# EPPFOutFile = reppf.pcm
+EPPFOutFileType = F
+
+# PC = Prefiltering completion stage
+PCOutWindow = 0
+PCNormFactor = 0.0
+PCNormType = E
+# PCOutFile = rpc.pcm
+PCOutFileType = F
+
+# IS = Inversion stage
+ISType = T
+ISPETType = f
+ISPrefilterFctn = B
+ISPELowerWindow = 918
+ISPEUpperWindow = 688
+ISPEStartFreq = 20
+ISPEEndFreq = 20000
+ISPEFilterLen = 8192
+ISPEFSharpness = 0.50
+ISPEBandSplit = 3
+ISPEWindowExponent = 1.0
+ISPEOGainFactor = 0.0
+ISSMPMultExponent = 4
+ISOutWindow = 0
+ISNormFactor = 0.0
+ISNormType = E
+# ISOutFile = ris.pcm
+ISOutFileType = F
+
+# PT = Psychoacoustic target stage
+PTType = M
+PTReferenceWindow = 26460 # 300 ms
+PTDLType = M
+PTDLMinGain = 0.1 # -20.0 dB Min
+PTDLStartFreq = 20
+PTDLEndFreq = 20000
+PTDLStart = 0.75
+PTDLMultExponent = 3
+PTBandWidth = -2
+PTPeakDetectionStrength = 15
+PTMultExponent = 0
+PTFilterLen = 65536
+# PTFilterFile = rptf.pcm
+PTFilterFileType = F
+PTNormFactor = 0.0
+PTNormType = E
+# PTOutFile = rpt.pcm
+PTOutFileType = F
+PTOutWindow = 0
+
+# PL = Peak limiting stage
+PLType = M
+PLMaxGain = 2.0 # +6.02 dB Max
+PLStart = 0.75
+PLStartFreq = 20
+PLEndFreq = 20000
+PLMultExponent = 3
+PLOutWindow = 0
+PLNormFactor = 0.0
+PLNormType = E
+# PLOutFile = rpl.pcm
+PLOutFileType = F
+
+# RT = Ringing truncation stage
+RTType = s
+RTPrefilterFctn = B
+RTWindowGap = 40
+RTLowerWindow = 5734 # 65 ms
+RTUpperWindow = 40 # 0.46 ms
+RTStartFreq = 20
+RTEndFreq = 20000
+RTFilterLen = 65536
+RTFSharpness = 0.25
+RTBandSplit = 3
+RTWindowExponent = 1.87
+RTOutWindow = 5734
+RTNormFactor = 0.0
+RTNormType = E
+# RTOutFile = rrt.pcm
+RTOutFileType = F
+
+# PS = Target respose stage
+PSFilterType = T
+PSInterpolationType = S
+PSMultExponent = 3
+PSFilterLen = 65535
+PSNumPoints = 0
+PSPointsFile = /home/tobias/.local/share/rhythmbox/plugins/DRC/DRCFiles/pa-44100.txt
+PSMagType = D
+PSOutWindow = 65536
+PSNormFactor = 1.0
+PSNormType = E
+PSOutFile = rps.pcm
+PSOutFileType = F
+
+# Minimum phase filter extraction stage
+MSMultExponent = 3
+MSOutWindow = 65536
+MSFilterDelay = 918
+MSNormFactor = 1.0
+MSNormType = E
+# MSOutFile = rms.pcm
+MSOutFileType = F
+
+# Test convolution stage
+TCNormFactor = 0.0
+TCNormType = M
+TCOutFile = rtc.pcm
+TCOutFileType = F
