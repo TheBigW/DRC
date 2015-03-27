@@ -36,7 +36,7 @@ $ECHO "of any kind. Please read the file "COPYING" for details."
 $ECHO 
 
 # Command line check
-if [[ $# != 9 && $# != 10 ]]; then
+if [[ $# != 10 && $# != 11 ]]; then
  $ECHO "Usage:"
  $ECHO " measure bits rate startf endf lslen lssil indev outdev impfile"
  $ECHO
@@ -65,8 +65,8 @@ LSSIL="$6"
 INDEV="$7"
 OUTDEV="$8"
 IMPFILE="$9"
-AMPLITUDE="$10"
-USE_REF="$11"
+AMPLITUDE="${10}"
+USE_REF="${11}"
 SWEEPFILE="sweep.pcm"
 
 # Check bits to use
@@ -82,12 +82,14 @@ else
 fi
 
 # Generate the log sweep
+$ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $USE_REF
+
+$ECHO "generating sweep " $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/msrawsweep.pcm ${TMP}/msinverse.pcm
 $GLSWEEP $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/msrawsweep.pcm ${TMP}/msinverse.pcm
 
 # Convert to WAV file
 $ECHO "Converting sweep to play format..."
 $SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -r $RATE -c 2 $SOXFMT ${TMP}/msplaysweep.wav
-$RM ${TMP}/msrawsweep.pcm
 
 # Filesystem sync
 $ECHO "Waiting 5 seconds for filesystem sync..."
@@ -101,9 +103,6 @@ $SLEEP 1
 RLEN=$(( $LSLEN + $LSSIL * 2 ))
 $APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
 $ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c 2 -d $RLEN ${TMP}/msrecsweep.wav
-
-# Remove the play sweep file
-$RM ${TMP}/msplaysweep.wav
 
 # Convert sweep file
 if [ $USE_REF == "use_ref" ]; then
@@ -124,4 +123,9 @@ $LSCONV ${TMP}/mssweep_speaker.pcm ${TMP}/msinverse.pcm $IMPFILE $REF_PARAM
 
 $ECHO "Temporary file cleanup..."
 
-$RM ${TMP}/msinverse.pcm
+# cleanup
+
+#$RM ${TMP}/msinverse.pcm
+#$RM ${TMP}/msrawsweep.pcm
+#$RM ${TMP}/msplaysweep.wav
+
