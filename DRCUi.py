@@ -46,6 +46,29 @@ class ChanelSelDlg():
             numChanels = 2
         return numChanels
 
+class DRCCfgDlg():
+    def __init__(self, parent):
+        self.uibuilder = Gtk.Builder()
+        self.uibuilder.add_from_file(rb.find_plugin_file(parent, "DRCUI.glade"))
+        self.dlg = self.uibuilder.get_object("drcCfgDlg")
+        okBtn = self.uibuilder.get_object("button_OKDRCDlg")
+        okBtn.connect( "clicked", self.on_Ok )
+        cancelBtn = self.uibuilder.get_object("button_CancelDRCDlg")
+        cancelBtn.connect( "clicked", self.on_Cancel )
+        self.filechooserbuttonMicCalFile = self.uibuilder.get_object("filechooserbuttonMicCalFile")
+        self.filechooserbuttonMicCalFile.set_current_folder("/usr/share/drc/mic")
+    def on_Ok(self, param):
+        self.dlg.response(Gtk.ResponseType.OK)
+        self.dlg.set_visible(False)
+    def on_Cancel(self, param):
+        self.dlg.response(Gtk.ResponseType.CANCEL)
+        self.dlg.set_visible(False)
+    def getMicCalibrationFile(self):
+        return self.filechooserbuttonMicCalFile.get_filename()
+    def run(self):
+        print("running dlg...")
+        return self.dlg.run()
+
 def getDeviceListFromAlsaOutput( command ):
     p = subprocess.Popen([command, "-l"], stdout=subprocess.PIPE)
     out, err = p.communicate()
@@ -112,9 +135,23 @@ class DRCDlg:
 
         self.comboDRC = self.uibuilder.get_object("combo_drc_type")
         #TODO: check availibility of PORC & DRC and fill combo accordingly
+        self.cfgDRCButton = self.uibuilder.get_object("cfgDRCButton")
+        self.cfgDRCButton.connect( "clicked", self.on_cfgDRC )
         self.comboDRC.append_text("DRC")
         self.comboDRC.append_text("PORC")
         self.comboDRC.set_active(0)
+        self.comboDRC.connect("changed", self.on_DRCTypeChanged)
+        self.drcCfgDlg = DRCCfgDlg(self.parent)
+
+    def on_cfgDRC(self,button):
+        self.drcCfgDlg.run()
+
+    def on_DRCTypeChanged(self, combo):
+        drcMethod = combo.get_active_text()
+        if drcMethod == "DRC":
+            self.cfgDRCButton.show()
+        else:
+            self.cfgDRCButton.hide()
 
     def slider_changed(self, hscale):
         self.sweep_level = hscale.get_value();
@@ -200,21 +237,33 @@ class DRCDlg:
             bufferStr = newBuff
         return newBuff
 
+    def getTmpCfgDir(self):
+        cachedir = RB.user_cache_dir() + "/DRC"
+        tmpCfgDir = cachedir + "/TmpDRCCfg"
+        if not os.path.exists(tmpCfgDir ):
+            os.makedirs(tmpCfgDir)
+        return tmpCfgDir
+
     def prepareDRC( self, impRespFile, filterResultFile ):
         drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
-        srcCfgFilesPath = rb.find_plugin_file(self.parent, "DRCFiles")
-        drcCfgFile =  srcCfgFilesPath + "/erb44100.drc"
-        drcScript.append( drcCfgFile )
-        print("drcCfgFile : " + drcCfgFile )
+        drcCfgFileName = "erb44100.drc"
+        drcCfgSrcFile = rb.find_plugin_file(self.parent, drcCfgFileName)
+        drcCfgDestFile = self.getTmpCfgDir() + "/" + drcCfgFileName
+        drcScript.append( drcCfgDestFile )
+        print("drcCfgDestFile : " + drcCfgDestFile )
         #update filter file
-        srcDrcCfgFile = open( drcCfgFile, "r" )
+        srcDrcCfgFile = open( drcCfgSrcFile, "r" )
         srcData = srcDrcCfgFile.read()
-        srcDrcCfgFile.close()
-        #TODO:add mic compensation
-        destData = self.changeCfgParamDRC(srcData, [["BCInFile", impRespFile], ["PSPointsFile", srcCfgFilesPath + "/pa-44100.txt"]])
-        destDrcCfgFile = open( drcCfgFile, "w" )
+        micCalFile = self.drcCfgDlg.getMicCalibrationFile()
+        changeCfgFileArray = [["BCInFile", impRespFile], ["PSPointsFile", rb.find_plugin_file(self.parent, "pa-44100.txt")]]
+        if micCalFile != None:
+            changeCfgFileArray.append( ["MCFilterType","M"] )
+            changeCfgFileArray.append( ["MCPointsFile",micCalFile] )
+        else:
+            changeCfgFileArray.append( ["MCFilterType","N"] )
+        destData = self.changeCfgParamDRC(srcData, changeCfgFileArray)
+        destDrcCfgFile = open( drcCfgDestFile, "w" )
         destDrcCfgFile.write(destData)
-        destDrcCfgFile.close()
         return drcScript
 
     def showMsgBox(self, msg):
@@ -245,7 +294,8 @@ class DRCDlg:
             porcCommand = pluginPath+"/porc/porc.py"
             if not os.path.isfile(porcCommand):
                 self.showMsgBox("porc.py not found. Please download from github and install in the DRC plugin subfolder 'porc'")
-            drcScript.append()
+                return
+            drcScript.append(porcCommand)
         #execute measure script to generate filters
         #last 2 parameters for all scripts allways impulse response and result filter
         drcScript.append(impRespFile)
