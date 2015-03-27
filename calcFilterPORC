@@ -2,9 +2,25 @@
 
 # Get command line parameters
 
-PORC="$1"
-IMPULSE_FILE="$2"
-FILTER_FILE="$3"
+PORC="${1}"
+IMPULSE_FILE="${2}"
+FILTER_FILE="${3}"
+RATE="44100"
+
+filename=$(basename "$IMPULSE_FILE")
+extension="${filename##*.}"
+echo "extension : " $extension
+if [ "$extension" != "wav" ]; then
+  echo "detected raw file input : doing sox conversion"
+  RAW_FILE_PATH="${IMPULSE_FILE%/*}"
+  DEST_WAV="$RAW_FILE_PATH"/TmpWave.wav""
+  #cleanup previous temp file if exists
+  rm $DEST_WAV -f
+  echo "destination wave file : " $DEST_WAV
+  sox -t raw -r $RATE -c 1 -e float -b32 ${IMPULSE_FILE} -t wav -r $RATE -e float -b32 ${DEST_WAV}
+  IMPULSE_FILE="$DEST_WAV"
+  echo "IMPULSE_FILE : " $IMPULSE_FILE
+fi
 
 #going with flat target curve. param -t allows for target curve. e.g -t tact30f.txt
 
