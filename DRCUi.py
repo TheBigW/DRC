@@ -72,7 +72,7 @@ class DRCCfgDlg():
 def getDeviceListFromAlsaOutput( command ):
     p = subprocess.Popen([command, "-l"], stdout=subprocess.PIPE)
     out, err = p.communicate()
-    pattern = re.compile("(\d*):\s.*?\[(.*?)\],\s.*?\s(\d*):.*?\s\[(.*?)\]", re.MULTILINE)
+    pattern = re.compile("\w* (\d*):\s.*?\[(.*?)\],\s.*?\s(\d*):.*?\s\[(.*?)\]", re.MULTILINE)
     alsaHardwareList = pattern.findall(str(out))
     print("found pattern : " + str(alsaHardwareList) )
     return alsaHardwareList
