@@ -104,19 +104,8 @@ RLEN=$(( $LSLEN + $LSSIL * 2 ))
 $APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
 $ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c 2 -d $RLEN ${TMP}/msrecsweep.wav
 
-# Convert sweep file
-if [ $USE_REF == "use_ref" ]; then
- $ECHO "recorded sweep ref channel conversion"
- $SOX ${TMP}/msrecsweep.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/mssweep_ref.pcm mixer -l
- REF_PARAM=${TMP}/mssweep_ref.pcm $MINGAIN $DLSTART
-fi
 $ECHO "recorded sweep conversion"
-$SOX ${TMP}/msrecsweep.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/mssweep_speaker.pcm mixer -r
-
-
-# Move or remove the recorded file
-$ECHO "Copying sweepfile to ${SWEEPFILE}..."
-$MV ${TMP}/msrecsweep.wav "$SWEEPFILE"
+$SOX ${TMP}/msrecsweep.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/mssweep_speaker.pcm remix 1 0
 
 # Extract the impulse response
 $LSCONV ${TMP}/mssweep_speaker.pcm ${TMP}/msinverse.pcm $IMPFILE $REF_PARAM 
@@ -128,4 +117,6 @@ $ECHO "Temporary file cleanup..."
 #$RM ${TMP}/msinverse.pcm
 #$RM ${TMP}/msrawsweep.pcm
 #$RM ${TMP}/msplaysweep.wav
+#$ECHO "Copying sweepfile to ${SWEEPFILE}..."
+#$MV ${TMP}/msrecsweep.wav "$SWEEPFILE"
 
