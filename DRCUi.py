@@ -17,7 +17,9 @@
 from gi.repository import Gtk, Gio, Gdk, GdkPixbuf, Gst, RB
 import os, sys, inspect, subprocess, re
 import datetime
+import threading
 from DRCConfig import DRCConfig
+import DRCFileTool
 import rb
 
 class ChanelSelDlg():
@@ -53,18 +55,82 @@ class DRCCfgDlg():
         self.dlg = self.uibuilder.get_object("drcCfgDlg")
         okBtn = self.uibuilder.get_object("button_OKDRCDlg")
         okBtn.connect( "clicked", self.on_Ok )
-        cancelBtn = self.uibuilder.get_object("button_CancelDRCDlg")
-        cancelBtn.connect( "clicked", self.on_Cancel )
-        self.filechooserbuttonMicCalFile = self.uibuilder.get_object("filechooserbuttonMicCalFile")
-        self.filechooserbuttonMicCalFile.set_current_folder("/usr/share/drc/mic")
+    def on_Ok(self, param):
+        self.dlg.response(Gtk.ResponseType.OK)
+        self.dlg.destroy()
+    def run(self):
+        print("running dlg...")
+        return self.dlg.run()
+
+class InputVolumeProcess():
+
+    def __init__(self, updateProgressBar):
+        self.progressBar = updateProgressBar
+        self.proc = None
+        self.t = None
+
+    def reader_thread(self):
+        """Read subprocess output and put it into the queue."""
+        for line in iter(self.proc.stdout.readline, b''):
+            strLine = str(line)
+            #print(strLine)
+            result = self.pattern.findall(strLine)
+            if len(result) > 0:
+                #print("arecord: result : "+str(result))
+                iValue = int(result[0])
+                self.progressBar.set_fraction(iValue/100)
+
+    def start(self, recHW):
+        self.stop()
+        #for testing on other hardware:S16_LE
+        #maybe using plughw and see if it removes the dependencies to use that at all
+        volAlsaCmd = ["arecord", "-D"+recHW, "-c1", "-d0", "-fS32_LE", "/dev/null", "-vvv"]
+        self.proc = subprocess.Popen(volAlsaCmd , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.pattern = re.compile("(\d*)%", re.MULTILINE)
+        self.t = threading.Thread(None, target=self.reader_thread).start()
+
+    def stop(self):
+        if self.t != None:
+            self.t.terminate()
+        if self.proc != None:
+            self.proc.terminate()
+        self.progressBar.set_fraction(0.0)
+        self.proc = None
+        self.t=None
+
+class MeasureQADlg():
+
+    def __init__(self, parent, genSweepFile, measSweepFile, impRespFile):
+        self.uibuilder = Gtk.Builder()
+        self.uibuilder.add_from_file(rb.find_plugin_file(parent, "DRCUI.glade"))
+        self.dlg = self.uibuilder.get_object("measureQualityDlg")
+        okBtn = self.uibuilder.get_object("button_OKMeasQA")
+        okBtn.connect( "clicked", self.on_Ok )
+
+        genSweepData = DRCFileTool.LoadAudioFile(genSweepFile, 1)
+        self.setEvalData( genSweepData, "labelInputSweepData" )
+        measSweepData = DRCFileTool.LoadAudioFile(measSweepFile, 1)
+        minMaxRec = self.setEvalData( measSweepData, "labelRecordedSweepData" )
+        impRespData = DRCFileTool.LoadAudioFile(impRespFile, 1)
+        self.setEvalData( impRespData, "labelImpResponseData" )
+        #TODO: add evaluation
+        label=self.uibuilder.get_object("labelRecomendationResult")
+        result = "check values : recorded results seem to be fine to proceed"
+        if (minMaxRec[1] - minMaxRec[0]) < 0.1 :
+            result = "check values : recorded volume seems to be quite low: check proper input device or adjust gain"
+        label.set_text(result)
+
+    def setEvalData(self, dataArray, labelID):
+        minData = min(dataArray)
+        maxData = max(dataArray)
+        label=self.uibuilder.get_object(labelID)
+        text = "Min: " + str(minData) + " Max: " + str(maxData)
+        label.set_text( text )
+        return [minData, maxData]
+
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
         self.dlg.set_visible(False)
-    def on_Cancel(self, param):
-        self.dlg.response(Gtk.ResponseType.CANCEL)
-        self.dlg.set_visible(False)
-    def getMicCalibrationFile(self):
-        return self.filechooserbuttonMicCalFile.get_filename()
     def run(self):
         print("running dlg...")
         return self.dlg.run()
@@ -84,7 +150,6 @@ def fillComboFromDeviceList(combo, alsaHardwareList):
 
 class DRCDlg:
     def __init__(self, parent):
-        #super(Gtk.Dialog, self).__init__()
         self.parent = parent
         aCfg = DRCConfig()
         self.uibuilder = Gtk.Builder()
@@ -102,6 +167,9 @@ class DRCDlg:
         self.entryEndFrequency.set_text( str(aCfg.endFrequency) )
         self.entrySweepDuration.set_text( str(aCfg.sweepDuration) )
 
+        self.progressbarInputVolume = self.uibuilder.get_object("progressbarInputVolume")
+        self.inputVolumeUpdate = InputVolumeProcess( self.progressbarInputVolume )
+
         self.alsaPlayHardwareCombo = self.uibuilder.get_object("comboOutput")
         self.alsaRecHardwareCombo = self.uibuilder.get_object("comboRecord")
 
@@ -109,6 +177,7 @@ class DRCDlg:
         self.alsaRecHardwareList = getDeviceListFromAlsaOutput("arecord")
         fillComboFromDeviceList(self.alsaPlayHardwareCombo, self.alsaPlayHardwareList)
         fillComboFromDeviceList( self.alsaRecHardwareCombo, self.alsaRecHardwareList)
+        self.alsaRecHardwareCombo.connect( "changed", self.on_recDeviceChanged )
 
         execMeasureBtn = self.uibuilder.get_object("buttonMeassure")
         execMeasureBtn.connect( "clicked", self.on_execMeasure )
@@ -142,6 +211,11 @@ class DRCDlg:
         self.comboDRC.set_active(0)
         self.comboDRC.connect("changed", self.on_DRCTypeChanged)
         self.drcCfgDlg = DRCCfgDlg(self.parent)
+
+        self.inputVolumeUpdate.stop()
+
+    def on_recDeviceChanged(self,combo):
+        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString() )
 
     def on_cfgDRC(self,button):
         self.drcCfgDlg.run()
@@ -208,8 +282,13 @@ class DRCDlg:
         return measureResultsDir
 
     def on_execMeasure(self, param):
+        #TODO: make the measure script output the volume and parse from there during measurement
         scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
-        impOutputFile = self.getMeasureResultsDir() + "/impOutputFile" + datetime.datetime.now().strftime("%Y%m%d%H%M%S") +".pcm"
+        impOutputFile = self.getMeasureResultsDir() + "/impOutputFile" + \
+                        datetime.datetime.now().strftime("%Y%m%d%H%M%S_") +\
+                        str(self.entryStartFrequency.get_text()) +\
+                        "_" + str(self.entryEndFrequency.get_text())+\
+                        "_" + str(self.entrySweepDuration.get_text()) + ".pcm"
         #execute measure script to generate filters
         commandLine = [scriptName, str(self.sweep_level),
                                 self.getAlsaRecordHardwareString(),
@@ -221,8 +300,11 @@ class DRCDlg:
         p = subprocess.Popen(commandLine, stdout=subprocess.PIPE)
         out, err = p.communicate()
         print( "output from measure script : " + str(out) )
-        #TODO: check for errors
         self.uibuilder.get_object("impResponseFileChooserBtn").set_filename(impOutputFile)
+        #TODO: check for errors
+        #quality check:sweep file and measured result
+        evalDlg = MeasureQADlg(self.parent, "/tmp/msrawsweep.pcm", "/tmp/mssweep_speaker.pcm", impOutputFile)
+        evalDlg.run()
 
     def changeCfgParamDRC(self, bufferStr, changeArray):
         newBuff = bufferStr
@@ -308,11 +390,13 @@ class DRCDlg:
 
     def on_close(self, shell):
         print( "closing ui")
+        self.inputVolumeUpdate.stop()
         self.dlg.set_visible(False)
         return True
 
     def show_ui(self, shell, state, dummy):
         print("showing UI")
+        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString() )
         self.dlg.show_all()
         self.dlg.present()
         print( "done showing UI" )
