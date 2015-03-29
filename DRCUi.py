@@ -84,7 +84,7 @@ class InputVolumeProcess():
         self.stop()
         #for testing on other hardware:S16_LE
         #maybe using plughw and see if it removes the dependencies to use that at all
-        volAlsaCmd = ["arecord", "-D"+recHW, "-c1", "-d0", "-fS32_LE", "/dev/null", "-vvv"]
+        volAlsaCmd = ["arecord", "-D"+recHW, "-c2", "-d0", "-fS32_LE", "/dev/null", "-vvv"]
         self.proc = subprocess.Popen(volAlsaCmd , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.pattern = re.compile("(\d*)%", re.MULTILINE)
         self.t = threading.Thread(None, target=self.reader_thread).start()
