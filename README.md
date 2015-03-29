@@ -30,3 +30,6 @@ The tool adresses all 3 areas and all can be used independently. E.g. if you mea
 
 
 for installation just copy all files to HOME/.local/share/rhythmbox/plugins/DRC
+
+TODO:           add ui for target curve adaptation
+Limitations:    recording is hardcoded for devices that support S32_LE 32 bit recording format
