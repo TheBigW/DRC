@@ -34,3 +34,6 @@ for installation just copy all files to HOME/.local/share/rhythmbox/plugins/DRC
 TODO:           add ui for target curve adaptation
 Limitations:    -recording is hardcoded for devices that support S32_LE 32 bit recording format
 		-for devices with multiple input chanels: it is hardcoded to channel '2' (arecord -c2)
+		-only fraction of DRC capabilities is there: e.g hardcoded target curve, but files are available for edit in the plugin folder
+
+Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.
