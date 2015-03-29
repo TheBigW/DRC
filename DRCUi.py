@@ -55,9 +55,18 @@ class DRCCfgDlg():
         self.dlg = self.uibuilder.get_object("drcCfgDlg")
         okBtn = self.uibuilder.get_object("button_OKDRCDlg")
         okBtn.connect( "clicked", self.on_Ok )
+        cancelBtn = self.uibuilder.get_object("button_CancelDRCDlg")
+        cancelBtn.connect( "clicked", self.on_Cancel )
+        self.filechooserbuttonMicCalFile = self.uibuilder.get_object("filechooserbuttonMicCalFile")
+        self.filechooserbuttonMicCalFile.set_current_folder("/usr/share/drc/mic")
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
-        self.dlg.destroy()
+        self.dlg.set_visible(False)
+    def on_Cancel(self, param):
+        self.dlg.response(Gtk.ResponseType.CANCEL)
+        self.dlg.set_visible(False)
+    def getMicCalibrationFile(self):
+        return self.filechooserbuttonMicCalFile.get_filename()
     def run(self):
         print("running dlg...")
         return self.dlg.run()

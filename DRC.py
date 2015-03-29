@@ -51,9 +51,9 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
         #print inspect.getdoc( self.fir_filter )
         num_filter_coeff = len( filter_array )
         if num_filter_coeff > 0:
-            self.fir_filter.set_property( 'latency', 0 )#int(num_filter_coeff /2) )
+            self.fir_filter.set_property( 'latency', num_filter_coeff/2 )#int(num_filter_coeff /2) )
             print( "num_filter_coeff", num_filter_coeff )
-            kernel = self.fir_filter.get_property('kernel')
+            kernel = []
             #print( "kernel : ", kernel)
             for i in range(0, num_filter_coeff):
                 kernel.append( filter_array[i] )
