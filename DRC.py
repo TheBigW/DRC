@@ -47,6 +47,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
 
     def updateFilter(self, filterFileName, numChannels = None):
         try:
+            self.shell_player.stop()
             self.remove_Filter()
             filter_array = DRCFileTool.LoadAudioFile(filterFileName, numChannels)
             #pass the filter data to the fir filter
@@ -63,12 +64,14 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
                 #TODO: check possibility to scale filter strength (configurable devisor etc...)
                 self.fir_filter.set_property('kernel', kernel)
             self.set_filter()
+            #self.shell_player.play()
         except Exception as inst:
             print( 'error updating filter',  sys.exc_info()[0], type(inst), inst )
             pass
 
     def do_activate(self):
         try:
+            self.selfTriggered = False
             self.filterSet = False
             self.shell = self.object
             self.shell_player = self.shell.props.shell_player
@@ -147,7 +150,8 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             sp.do_next()
 
     def playing_song_changed(self, sp, entry):
-        if entry == None:
+        if entry == None or self.selfTriggered:
+            self.selfTriggered = False
             return
         #workaround due to FIR filter issues during playing back multiple songs
         #switching as well as new song select in UI seems to fix that
@@ -155,8 +159,12 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             clean way would be to check has-prev/has-next but seems to be useless:
             returns true even if no son is previous in current UI list...
         '''
-        sp.do_next()
-        sp.do_previous()
+        if sp.get_property("has-next"):
+            sp.do_next()
+            self.selfTriggered = True
+        if sp.get_property("has-prev"):
+            sp.do_previous()
+            self.selfTriggered = True
 
     def find_file(self, filename):
         info = self.plugin_info
