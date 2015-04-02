@@ -59,6 +59,7 @@ class DRCCfgDlg():
         cancelBtn.connect( "clicked", self.on_Cancel )
         self.filechooserbuttonMicCalFile = self.uibuilder.get_object("filechooserbuttonMicCalFile")
         self.filechooserbuttonMicCalFile.set_current_folder("/usr/share/drc/mic")
+        #TODO: add target curve selection from default DRC dir
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
         self.dlg.set_visible(False)
@@ -346,6 +347,7 @@ class DRCDlg:
         srcDrcCfgFile = open( drcCfgSrcFile, "r" )
         srcData = srcDrcCfgFile.read()
         micCalFile = self.drcCfgDlg.getMicCalibrationFile()
+        #TODO: add target curve from configuration
         changeCfgFileArray = [["BCInFile", impRespFile], ["PSPointsFile", rb.find_plugin_file(self.parent, "pa-44100.txt")]]
         if micCalFile != None:
             changeCfgFileArray.append( ["MCFilterType","M"] )
