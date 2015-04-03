@@ -59,6 +59,9 @@ class DRCCfgDlg():
         cancelBtn.connect( "clicked", self.on_Cancel )
         self.filechooserbuttonMicCalFile = self.uibuilder.get_object("filechooserbuttonMicCalFile")
         self.filechooserbuttonMicCalFile.set_current_folder("/usr/share/drc/mic")
+        self.filechooserbuttonTargetCurve = self.uibuilder.get_object("filechooserbuttonTargetCurve")
+        self.filechooserbuttonTargetCurve.set_current_folder("/usr/share/drc/target/44.1 kHz")
+        self.filechooserbuttonTargetCurve.set_filename("/usr/share/drc/target/44.1 kHz/pa-44.1.txt")
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
         self.dlg.set_visible(False)
@@ -67,6 +70,8 @@ class DRCCfgDlg():
         self.dlg.set_visible(False)
     def getMicCalibrationFile(self):
         return self.filechooserbuttonMicCalFile.get_filename()
+    def getTargetCurveFile(self):
+        return self.filechooserbuttonTargetCurve.get_filename()
     def run(self):
         print("running dlg...")
         return self.dlg.run()
@@ -346,7 +351,7 @@ class DRCDlg:
         srcDrcCfgFile = open( drcCfgSrcFile, "r" )
         srcData = srcDrcCfgFile.read()
         micCalFile = self.drcCfgDlg.getMicCalibrationFile()
-        changeCfgFileArray = [["BCInFile", impRespFile], ["PSPointsFile", rb.find_plugin_file(self.parent, "pa-44100.txt")]]
+        changeCfgFileArray = [["BCInFile", impRespFile], ["PSPointsFile", self.drcCfgDlg.getTargetCurveFile()]]
         if micCalFile != None:
             changeCfgFileArray.append( ["MCFilterType","M"] )
             changeCfgFileArray.append( ["MCPointsFile",micCalFile] )
