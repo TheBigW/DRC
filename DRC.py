@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-import os, sys, inspect, struct
+import os, sys, inspect, struct, time, threading
 
 from gi.repository import GObject, Gst, Peas, RB, Gtk, Gdk, GdkPixbuf
 from DRCUi import DRCDlg
@@ -47,6 +47,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
 
     def updateFilter(self, filterFileName, numChannels = None):
         try:
+            self.shell_player.stop()
             self.remove_Filter()
             filter_array = DRCFileTool.LoadAudioFile(filterFileName, numChannels)
             #pass the filter data to the fir filter
@@ -63,12 +64,15 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
                 #TODO: check possibility to scale filter strength (configurable devisor etc...)
                 self.fir_filter.set_property('kernel', kernel)
             self.set_filter()
+            #self.shell_player.play()
         except Exception as inst:
             print( 'error updating filter',  sys.exc_info()[0], type(inst), inst )
             pass
 
     def do_activate(self):
         try:
+            self.duration = 0
+            self.selfAllowTriggered = False
             self.filterSet = False
             self.shell = self.object
             self.shell_player = self.shell.props.shell_player
@@ -83,7 +87,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             pass
         self.psc_id = self.shell_player.connect('playing-song-changed', self.playing_song_changed)
         #no possible workaround as somehow never reaches end of song :(
-        #self.psc_id = self.shell_player.connect('elapsed-changed', self.elapsed_changed)
+        self.shell_player.connect('elapsed-changed', self.elapsed_changed)
         #finally add UI
         self.add_ui( self, self.shell )
 
@@ -136,18 +140,28 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
     def elapsed_changed(self, sp, elapsed):
         #workaround due to FIR filter issues during playing back multiple songs
         #switching as well as new song select in UI seems to fix that
-        duration = sp.get_playing_song_duration()
-        #print("duration: " + str(duration))
         #print("elapsed : " + str(elapsed) )
-        diff = duration - elapsed
+        diff = self.duration - elapsed
         #print("diff : " + str(diff))
-        if diff <= 1:
-            print("end of song reached : skip next")
-            #time.sleep(0.5)
-            sp.do_next()
+        #allowing self triggered skip forth and back after last 15 seconds
+        #to bad that diff is unreliable.. no idea why 0 never marks the real end
+        if self.duration < 1:
+            return
+        if diff <= 15 and diff > -1:
+            print("end of song reached : allow triggering")
+            self.selfAllowTriggered = True
+            self.duration = 0
+        else:
+            self.selfAllowTriggered = False
+
+    @staticmethod
+    def onHandleSongChange(sp):
+        sp.do_previous()
 
     def playing_song_changed(self, sp, entry):
-        if entry == None:
+        self.duration = sp.get_playing_song_duration()
+        #print("playing song duration: " + str(self.duration))
+        if entry == None or not self.selfAllowTriggered:
             return
         #workaround due to FIR filter issues during playing back multiple songs
         #switching as well as new song select in UI seems to fix that
@@ -156,7 +170,8 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             returns true even if no son is previous in current UI list...
         '''
         sp.do_next()
-        sp.do_previous()
+        threading.Timer(0.5, self.onHandleSongChange, [sp]).start()
+        self.selfAllowTriggered = False
 
     def find_file(self, filename):
         info = self.plugin_info
