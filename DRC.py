@@ -170,7 +170,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             returns true even if no son is previous in current UI list...
         '''
         sp.do_next()
-        threading.Timer(0.5, self.onHandleSongChange, [sp]).start()
+        threading.Timer(0.45, self.onHandleSongChange, [sp]).start()
         self.selfAllowTriggered = False
 
     def find_file(self, filename):
