@@ -3,8 +3,9 @@
 # Get command line parameters
 
 PORC="${1}"
-IMPULSE_FILE="${2}"
-FILTER_FILE="${3}"
+TARGET_CURVE_FILE="${2}"
+IMPULSE_FILE="${3}"
+FILTER_FILE="${4}"
 RATE="44100"
 
 filename=$(basename "$IMPULSE_FILE")
@@ -12,8 +13,7 @@ extension="${filename##*.}"
 echo "extension : " $extension
 if [ "$extension" != "wav" ]; then
   echo "detected raw file input : doing sox conversion"
-  RAW_FILE_PATH="${IMPULSE_FILE%/*}"
-  DEST_WAV="$RAW_FILE_PATH"/TmpWave.wav""
+  DEST_WAV="/tmp/TmpWave.wav"
   #cleanup previous temp file if exists
   rm $DEST_WAV -f
   echo "destination wave file : " $DEST_WAV
@@ -23,6 +23,7 @@ if [ "$extension" != "wav" ]; then
 fi
 
 #going with flat target curve. param -t allows for target curve. e.g -t tact30f.txt
-
+#filter length 65535 : same as DRC
 echo "calculating filters"
-python $PORC --mixed  -n 6144 -o bin $IMPULSE_FILE $FILTER_FILE
+python $PORC --mixed  -n 65535 -o bin -t "${TARGET_CURVE_FILE}" $IMPULSE_FILE $FILTER_FILE
+
