@@ -154,10 +154,6 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
         else:
             self.selfAllowTriggered = False
 
-    @staticmethod
-    def onHandleSongChange(sp):
-        sp.do_previous()
-
     def playing_song_changed(self, sp, entry):
         self.duration = sp.get_playing_song_duration()
         #print("playing song duration: " + str(self.duration))
@@ -169,8 +165,9 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             clean way would be to check has-prev/has-next but seems to be useless:
             returns true even if no son is previous in current UI list...
         '''
-        sp.do_next()
-        threading.Timer(0.45, self.onHandleSongChange, [sp]).start()
+        source = sp.get_playing_source()
+        sp.stop()
+        sp.play_entry(entry, source)
         self.selfAllowTriggered = False
 
     def find_file(self, filename):

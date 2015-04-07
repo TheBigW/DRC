@@ -210,7 +210,8 @@ class DRCDlg:
 
         self.impResponseFileChooserBtn = self.uibuilder.get_object("impResponseFileChooserBtn")
         self.impResponseFileChooserBtn.set_current_folder( self.getMeasureResultsDir() )
-
+        self.filechooserbuttonTargetCurve = self.uibuilder.get_object("filechooserbuttonTargetCurve")
+        self.filechooserbuttonTargetCurve.set_current_folder("/usr/share/drc/target/44.1 kHz")
         self.comboDRC = self.uibuilder.get_object("combo_drc_type")
         #TODO: check availibility of PORC & DRC and fill combo accordingly
         self.cfgDRCButton = self.uibuilder.get_object("cfgDRCButton")
@@ -219,13 +220,10 @@ class DRCDlg:
         self.comboDRC.append_text("PORC")
         self.comboDRC.set_active(0)
         self.comboDRC.connect("changed", self.on_DRCTypeChanged)
+        self.on_DRCTypeChanged(self.comboDRC)
         self.drcCfgDlg = DRCCfgDlg(self.parent)
 
         self.inputVolumeUpdate.stop()
-
-        self.filechooserbuttonTargetCurve = self.uibuilder.get_object("filechooserbuttonTargetCurve")
-        self.filechooserbuttonTargetCurve.set_current_folder("/usr/share/drc/target/44.1 kHz")
-        self.filechooserbuttonTargetCurve.set_filename("/usr/share/drc/target/44.1 kHz/pa-44.1.txt")
 
     def on_recDeviceChanged(self,combo):
         self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString() )
@@ -237,8 +235,12 @@ class DRCDlg:
         drcMethod = combo.get_active_text()
         if drcMethod == "DRC":
             self.cfgDRCButton.show()
+            self.filechooserbuttonTargetCurve.set_filename("/usr/share/drc/target/44.1 kHz/pa-44.1.txt")
         else:
             self.cfgDRCButton.hide()
+            drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
+            pluginPath = os.path.dirname(os.path.abspath(drcScript[0] ))
+            self.filechooserbuttonTargetCurve.set_filename( pluginPath + "/porc/data/tact30f.txt")
 
     def slider_changed(self, hscale):
         self.sweep_level = hscale.get_value();
