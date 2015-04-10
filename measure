@@ -49,7 +49,7 @@ if [[ $# != 10 && $# != 11 ]]; then
  $ECHO " indev: ALSA input device"
  $ECHO " outdev: ALSA output device"
  $ECHO " amplitude of sweep file 0.1 .. 1" 
- $ECHO " use reference channel: 'use_ref'"
+ $ECHO " recording chanel to use (device dependend 1..n)" 
  $ECHO "example: measure 16 44100 5 21000 45 2 plughw plughw impulse.pcm use_ref"
  $ECHO
  exit 0
@@ -66,7 +66,8 @@ INDEV="$7"
 OUTDEV="$8"
 IMPFILE="$9"
 AMPLITUDE="${10}"
-USE_REF="${11}"
+REC_CHANNEL="${11}"
+
 SWEEPFILE="sweep.pcm"
 
 # Check bits to use
@@ -82,7 +83,7 @@ else
 fi
 
 # Generate the log sweep
-$ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $USE_REF
+$ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $REC_CHANNEL
 
 $ECHO "generating sweep " $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/msrawsweep.pcm ${TMP}/msinverse.pcm
 $GLSWEEP $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/msrawsweep.pcm ${TMP}/msinverse.pcm
@@ -102,7 +103,7 @@ $ECHO "Measuring channel: left. Reference channel: right."
 $SLEEP 1
 RLEN=$(( $LSLEN + $LSSIL * 2 ))
 $APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
-$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c 2 -d $RLEN ${TMP}/msrecsweep.wav
+$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN ${TMP}/msrecsweep.wav
 
 $ECHO "recorded sweep conversion"
 $SOX ${TMP}/msrecsweep.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/mssweep_speaker.pcm remix 1 0
