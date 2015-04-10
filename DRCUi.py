@@ -89,11 +89,11 @@ class InputVolumeProcess():
                 iValue = int(result[0])
                 self.progressBar.set_fraction(iValue/100)
 
-    def start(self, recHW):
+    def start(self, recHW, chanel):
         self.stop()
         #for testing on other hardware:S16_LE
         #maybe using plughw and see if it removes the dependencies to use that at all
-        volAlsaCmd = ["arecord", "-D"+recHW, "-c2", "-d0", "-fS32_LE", "/dev/null", "-vvv"]
+        volAlsaCmd = ["arecord", "-D"+recHW, "-c" + chanel, "-d0", "-fS32_LE", "/dev/null", "-vvv"]
         self.proc = subprocess.Popen(volAlsaCmd , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.pattern = re.compile("(\d*)%", re.MULTILINE)
         self.t = threading.Thread(None, target=self.reader_thread).start()
@@ -182,14 +182,16 @@ class DRCDlg:
         self.alsaPlayHardwareCombo = self.uibuilder.get_object("comboOutput")
         self.alsaRecHardwareCombo = self.uibuilder.get_object("comboRecord")
 
+        self.execMeasureBtn = self.uibuilder.get_object("buttonMeassure")
+        self.execMeasureBtn.connect( "clicked", self.on_execMeasure )
+
         self.alsaPlayHardwareList = getDeviceListFromAlsaOutput("aplay")
         self.alsaRecHardwareList = getDeviceListFromAlsaOutput("arecord")
         fillComboFromDeviceList(self.alsaPlayHardwareCombo, self.alsaPlayHardwareList)
         fillComboFromDeviceList( self.alsaRecHardwareCombo, self.alsaRecHardwareList)
         self.alsaRecHardwareCombo.connect( "changed", self.on_recDeviceChanged )
-
-        execMeasureBtn = self.uibuilder.get_object("buttonMeassure")
-        execMeasureBtn.connect( "clicked", self.on_execMeasure )
+        self.comboInputChanel = self.uibuilder.get_object("comboInputChanel")
+        self.on_recDeviceChanged(self.comboInputChanel)
 
         calcDRCBtn = self.uibuilder.get_object("buttonCalculateFilter")
         calcDRCBtn.connect( "clicked", self.on_calculateDRC )
@@ -225,8 +227,35 @@ class DRCDlg:
 
         self.inputVolumeUpdate.stop()
 
+    def getRecordingDeviceInfo(self):
+        p = subprocess.Popen(["arecord"] + ["-D", self.getAlsaRecordHardwareString(), "--dump-hw-params"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        out, err = p.communicate()
+        print("hw infos : " + str(err))
+        pattern = re.compile("^.*:\s(\d)", re.MULTILINE)
+        numChanels = pattern.findall(str(err))
+
+        pattern = re.compile("-\s(.?\d*_\w*)", re.MULTILINE)
+        supportedModes = pattern.findall(str(err))
+
+        print( "numChannels : " + str(numChanels) )
+        print( "supportedModes : " + str(supportedModes) )
+        print( "No. supported Modes : " + str(len(supportedModes)) )
+        return [int(numChanels[0]), supportedModes]
+
     def on_recDeviceChanged(self,combo):
-        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString() )
+        self.inputVolumeUpdate.stop()
+        recDeviceInfo = self.getRecordingDeviceInfo()
+        self.comboInputChanel.remove_all()
+        #TODO: at the moment just 32 bit recording is supported. Maybe check if other bitdepths make sense too
+        if "S32_LE" in recDeviceInfo[1]:
+            for chanel in range(0, recDeviceInfo[0]):
+                self.comboInputChanel.append_text(str(chanel+1))
+            self.comboInputChanel.set_active(0)
+            self.execMeasureBtn.set_sensitive(True)
+            self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), self.comboInputChanel.get_active_text() )
+        else:
+            self.showMsgBox( "Recording device does not support 32 bit recording(S32_LE)" )
+            self.execMeasureBtn.set_sensitive(False)
 
     def on_cfgDRC(self,button):
         self.drcCfgDlg.run()
@@ -297,6 +326,7 @@ class DRCDlg:
         return measureResultsDir
 
     def on_execMeasure(self, param):
+        self.inputVolumeUpdate.stop()
         #TODO: make the measure script output the volume and parse from there during measurement
         scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
         impOutputFile = self.getMeasureResultsDir() + "/impOutputFile" + \
@@ -311,7 +341,8 @@ class DRCDlg:
                                 str(self.entryStartFrequency.get_text()),
                                 str(self.entryEndFrequency.get_text()),
                                 str(self.entrySweepDuration.get_text()),
-                                impOutputFile]
+                                impOutputFile,
+                                self.comboInputChanel.get_active_text()]
         p = subprocess.Popen(commandLine, stdout=subprocess.PIPE)
         out, err = p.communicate()
         print( "output from measure script : " + str(out) )
@@ -412,7 +443,7 @@ class DRCDlg:
 
     def show_ui(self, shell, state, dummy):
         print("showing UI")
-        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString() )
+        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), self.comboInputChanel.get_active_text() )
         self.dlg.show_all()
         self.dlg.present()
         print( "done showing UI" )
