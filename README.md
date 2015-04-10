@@ -14,7 +14,7 @@ There are 3 steps in the process of DRC
 measuring plays a configurable sine sweep and measres its room response. For that purpose calibrated measurment equipment is needed. I use a calibrated Behringer ECM8000 and a Focusrite 2i2 USB audio interface. 
 Caution: configure your sweep carefully. It makes obviously no sense to calibrate small desktop speakers for lower than 50Hz (read your speaker specs).
 
-	--> depends on packages: sox, alsa
+	--> depends on packages: sox, alsa-utils (uses aplay, arecord)
 
 2) calculate the needed filter to correct room response 
 
@@ -31,9 +31,8 @@ The tool adresses all 3 areas and all can be used independently. E.g. if you mea
 
 for installation just copy all files to HOME/.local/share/rhythmbox/plugins/DRC
 
-TODO:           add ui for target curve adaptation
+TODO:           add ui for target curve adaptation; work on limitations below :)
 Limitations:    -recording is hardcoded for devices that support S32_LE 32 bit recording format
-		-for devices with multiple input chanels: it is hardcoded to channel '2' (arecord -c2)
 		-only fraction of DRC capabilities is there: e.g hardcoded target curve, but files are available for edit in the plugin folder
 
 Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.
