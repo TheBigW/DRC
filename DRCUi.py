@@ -93,7 +93,7 @@ class InputVolumeProcess():
         self.stop()
         #for testing on other hardware:S16_LE
         #maybe using plughw and see if it removes the dependencies to use that at all
-        volAlsaCmd = ["arecord", "-D"+recHW, "-c" + chanel, "-d0", "-fS32_LE", "/dev/null", "-vvv"]
+        volAlsaCmd = ["arecord", "-D "+recHW, "-c" + chanel, "-d0", "-fS32_LE", "/dev/null", "-vvv"]
         self.proc = subprocess.Popen(volAlsaCmd , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.pattern = re.compile("(\d*)%", re.MULTILINE)
         self.t = threading.Thread(None, target=self.reader_thread).start()
@@ -231,16 +231,22 @@ class DRCDlg:
         p = subprocess.Popen(["arecord"] + ["-D", self.getAlsaRecordHardwareString(), "--dump-hw-params"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         out, err = p.communicate()
         print("hw infos : " + str(err))
-        pattern = re.compile("^.*:\s(\d)", re.MULTILINE)
+        #I rely on channels as it seems to be not translated
+        pattern = re.compile("CHANNELS:\s\[?(\d{1,2})\s?(\d{1,2})?\]?", re.MULTILINE)
         numChanels = pattern.findall(str(err))
-
+        #workaround to remove empty match in case of just single number because I was not clever enough to have a clean conditional regex...
+        if len(numChanels[0]) > 1 and not numChanels[0][1]:
+            print("only channel number present -> truncate")
+            numChanels = [numChanels[0][0]]
+        else:
+            numChanels = [numChanels[0][0], numChanels[0][1]]
         pattern = re.compile("-\s(.?\d*_\w*)", re.MULTILINE)
         supportedModes = pattern.findall(str(err))
 
         print( "numChannels : " + str(numChanels) )
         print( "supportedModes : " + str(supportedModes) )
         print( "No. supported Modes : " + str(len(supportedModes)) )
-        return [int(numChanels[0]), supportedModes]
+        return [numChanels, supportedModes]
 
     def on_recDeviceChanged(self,combo):
         self.inputVolumeUpdate.stop()
@@ -248,7 +254,12 @@ class DRCDlg:
         self.comboInputChanel.remove_all()
         #TODO: at the moment just 32 bit recording is supported. Maybe check if other bitdepths make sense too
         if "S32_LE" in recDeviceInfo[1]:
-            for chanel in range(0, recDeviceInfo[0]):
+            start = 0
+            end = int(recDeviceInfo[0][0])
+            if len(recDeviceInfo[0]) > 1:
+                start = max(int(recDeviceInfo[0][0]) - 1, 0)
+                end = int(recDeviceInfo[0][1])
+            for chanel in range(start, end):
                 self.comboInputChanel.append_text(str(chanel+1))
             self.comboInputChanel.set_active(0)
             self.execMeasureBtn.set_sensitive(True)
