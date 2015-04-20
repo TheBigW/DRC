@@ -21,6 +21,7 @@ import threading
 from DRCConfig import DRCConfig
 import DRCFileTool
 import rb
+from DRCTargetCurveUI import EQControl
 
 class ChanelSelDlg():
     def __init__(self, parent):
@@ -225,7 +226,13 @@ class DRCDlg:
         self.on_DRCTypeChanged(self.comboDRC)
         self.drcCfgDlg = DRCCfgDlg(self.parent)
 
+        self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked", self.on_editTargetCurve )
+
         self.inputVolumeUpdate.stop()
+
+    def on_editTargetCurve(self, widget):
+        editDlg = EQControl(self.filechooserbuttonTargetCurve.get_filename(), self.parent)
+        editDlg.run()
 
     def getRecordingDeviceInfo(self):
         p = subprocess.Popen(["arecord"] + ["-D", self.getAlsaRecordHardwareString(), "--dump-hw-params"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
