@@ -20,7 +20,7 @@ import os, sys, inspect, subprocess, re
 import rb
 
 def loadTargetCurveFile(targetCurveFile):
-    pattern = re.compile("\n?(\d\.?\d*)\s+(.*)\n?")
+    pattern = re.compile("\n?(\d*\.?\d*)\s+(.*)\n?")
     curveValueArray = []
 
     with open(targetCurveFile) as fp:
@@ -33,12 +33,17 @@ def loadTargetCurveFile(targetCurveFile):
 
 def writeTargetCurveFile(targetCurveFile, data):
     '''
-    TODO:enforce DRC curve limitations : The first line must have a frequency equal
+    enforce DRC curve expectations : The first line must have a frequency equal
     to 0, the last line must have a frequency equal to BCSampleRate / 2 . A post
     filter definition file must have the following format:'''
-    with open(targetCurveFile) as fp:
+    data.sort()
+    if data[0][0] != 0:
+        data.insert(0, (0,-100.0))
+    if data[-1][0] != 22050:
+        data.append( (22050, -100.0) )
+    with open(targetCurveFile, "w") as fp:
         for lineData in data:
-            fp.write("%i %f\n" % lineData[0], lineData[1])
+            print("{} {}".format(int(lineData[0]), lineData[1]), file=fp)
 
 class LabeledEdit:
     def __init__(self, box, text, value, strDescription = None):
@@ -59,20 +64,23 @@ class AddDialog(Gtk.Dialog):
     def __init__(self, parent, params = None):
         if None != params:
             self.params = params
+        else:
+            self.params = [(100,0)]
         super(Gtk.Dialog, self).__init__()
         okBtn = self.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
         okBtn.connect( "clicked", self.on_ok )
         self.set_default_size(150, 100)
         box = self.get_content_area()
-        self.freqLE = LabeledEdit( box, "frequency", str(self.params.frequency), "Frequency of the EQBand" )
-        self.gainLE = LabeledEdit( box, "Gain", str(self.params.gain), "Gain of the EQBand" )
+        self.freqLE = LabeledEdit( box, "frequency", str(self.params[0][0]), "Frequency of the EQBand" )
+        self.gainLE = LabeledEdit( box, "Gain", str(self.params[0][1]), "Gain of the EQBand" )
         self.show_all()
     def on_ok(self, param):
-        self.params.append( (float(self.gainLE.entry.get_text()), float(self.freqLE.entry.get_text())) )
+        self.params = [(float(self.freqLE.entry.get_text()), float(self.gainLE.entry.get_text()))]
 
 class EQGroupControl(Gtk.VBox):
     def __init__(self, frequency, amplitude, parent):
         super(Gtk.VBox, self).__init__(False)
+        self.frequency = frequency
         self.parent = parent
         self.slider = Gtk.VScale()
         self.slider.set_range( -100, 0 )
@@ -92,11 +100,12 @@ class EQGroupControl(Gtk.VBox):
     def getAmplitude(self):
         return self.slider.get_value()
     def getFrequency(self):
-        return int(self.labelFreq.entry.get_text())
+        return float(self.frequency)
 
 class EQControl():
     def __init__(self, targetCurveFile, parent):
         #self.set_title( "N Bands parametric EQ" )
+        self.targetCurveFilename = targetCurveFile
         addBtn = self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file( rb.find_plugin_file(parent, "DRCUI.glade") )
         self.dlg = self.uibuilder.get_object("EQDlg")
@@ -105,19 +114,31 @@ class EQControl():
         closeBtn = self.uibuilder.get_object("button_CloseEQ")
         closeBtn.connect( "clicked", self.on_Ok )
         saveTargetCurveButton = self.uibuilder.get_object("saveTargetCurveButton")
+        saveTargetCurveButton.connect("file-set", self.on_file_selected)
         data = loadTargetCurveFile(targetCurveFile)
         self.eqBox = self.uibuilder.get_object("EQBox")
         self.rebuild_eq_controls(data)
+    def getTargetCurveFile(self):
+        return self.targetCurveFilename
+
+    def on_file_selected(self, widget):
+        self.targetCurveFilename = widget.get_filename()
+        params = self.getEqParamListFromUI()
+        #open file safe dialog and safe
+        writeTargetCurveFile( self.targetCurveFilename, params )
 
     def rebuild_eq_controls(self, params):
         numEqBands = len(params)
+        #remove all controls
+        eqBandctrls = self.eqBox.get_children()
+        print("children : ", len(eqBandctrls))
+        numBands = len(eqBandctrls)
+        for i in range(0,numBands):
+            self.eqBox.remove(eqBandctrls[i])
         for i in range(0,numEqBands):
             self.eqBox.add(EQGroupControl( params[i][0], float(params[i][1]), self ))
         self.eqBox.show_all()
-    def on_apply_settings(self, some_param):
-        params = self.getEqParamListFromUI()
-        #open file safe dialog and safe
-        writeTargetCurveFile("/tmp/testCurve.txt", params)
+
     def getEqParamListFromUI(self ):
         params = []
         eqBandctrls = self.eqBox.get_children()
@@ -125,29 +146,39 @@ class EQControl():
         numBands = len(eqBandctrls)
         for i in range(0,numBands):
             control = eqBandctrls[i]
-            params.append( control.getFrequency(), control.getAmplitude() )
+            params.append( (control.getFrequency(), control.getAmplitude()) )
             #update UI in case of loudnes adaptation
         print("num bands :", len(params) )
         return params
+
     def add_new_eq_band(self, param):
         dlg = AddDialog(self)
         if dlg.run() == Gtk.ResponseType.OK :
             params=self.getEqParamListFromUI()
-            params.append( dlg.params )
-            numBands = len(params)
-            self.rebuild_eq_controls(params)
+            frequency = dlg.params[0][0]
+            if frequency <= 22050:
+                print("params : " + str(params) )
+                params.append( dlg.params[0] )
+                print("params : " + str(params) )
+                params.sort(key=lambda tup: tup[0])
+                self.rebuild_eq_controls(params)
+            else:
+                print("invalid frequency > 22050")
         dlg.destroy()
+
     def on_remove_band(self,eqbandCtrl):
         params=self.getEqParamListFromUI()
         numParams = len(params)
         param = None
         for i in range(0,numParams):
-            if eqbandCtrl.params.frequency == params[i].frequency:
+            print( "checking : " + str(eqbandCtrl.frequency) + " for : " + str(params[i]))
+            if eqbandCtrl.getFrequency() == params[i][0]:
                 param = params[i]
                 break
+        print( "attempt to remove : " + str(param) )
         params.remove(param)
         self.rebuild_eq_controls(params)
-        self.gain_changed()
+
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
         self.dlg.set_visible(False)

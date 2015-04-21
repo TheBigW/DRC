@@ -80,7 +80,6 @@ class InputVolumeProcess():
         self.t = None
 
     def reader_thread(self):
-        """Read subprocess output and put it into the queue."""
         for line in iter(self.proc.stdout.readline, b''):
             strLine = str(line)
             #print(strLine)
@@ -90,16 +89,19 @@ class InputVolumeProcess():
                 iValue = int(result[0])
                 self.progressBar.set_fraction(iValue/100)
 
-    def start(self, recHW, chanel):
+    def start(self, recHW, chanel, mode = None):
         self.stop()
-        #for testing on other hardware:S16_LE
+        if mode == None:
+            mode = "S32_LE"
         #maybe using plughw and see if it removes the dependencies to use that at all
-        volAlsaCmd = ["arecord", "-D "+recHW, "-c" + chanel, "-d0", "-fS32_LE", "/dev/null", "-vvv"]
+        volAlsaCmd = ["arecord", "-D"+recHW, "-c" + chanel, "-d0", "-f" + mode, "/dev/null", "-vvv"]
+        print ("starting volume monitoring with : " + str(volAlsaCmd) )
         self.proc = subprocess.Popen(volAlsaCmd , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.pattern = re.compile("(\d*)%", re.MULTILINE)
         self.t = threading.Thread(None, target=self.reader_thread).start()
 
     def stop(self):
+        print ("stoping volume monitoring" )
         if self.t != None:
             self.t.terminate()
         if self.proc != None:
@@ -192,6 +194,7 @@ class DRCDlg:
         fillComboFromDeviceList( self.alsaRecHardwareCombo, self.alsaRecHardwareList)
         self.alsaRecHardwareCombo.connect( "changed", self.on_recDeviceChanged )
         self.comboInputChanel = self.uibuilder.get_object("comboInputChanel")
+        self.comboInputChanel.connect( "changed", self.on_InputChanelChanged )
         self.on_recDeviceChanged(self.comboInputChanel)
 
         calcDRCBtn = self.uibuilder.get_object("buttonCalculateFilter")
@@ -227,12 +230,12 @@ class DRCDlg:
         self.drcCfgDlg = DRCCfgDlg(self.parent)
 
         self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked", self.on_editTargetCurve )
-
         self.inputVolumeUpdate.stop()
 
     def on_editTargetCurve(self, widget):
         editDlg = EQControl(self.filechooserbuttonTargetCurve.get_filename(), self.parent)
-        editDlg.run()
+        if editDlg.run() == Gtk.ResponseType.OK:
+            self.filechooserbuttonTargetCurve.set_filename( editDlg.getTargetCurveFile() )
 
     def getRecordingDeviceInfo(self):
         p = subprocess.Popen(["arecord"] + ["-D", self.getAlsaRecordHardwareString(), "--dump-hw-params"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -255,25 +258,30 @@ class DRCDlg:
         print( "No. supported Modes : " + str(len(supportedModes)) )
         return [numChanels, supportedModes]
 
+    def on_InputChanelChanged(self, combo):
+        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), combo.get_active_text() )
+
     def on_recDeviceChanged(self,combo):
         self.inputVolumeUpdate.stop()
         recDeviceInfo = self.getRecordingDeviceInfo()
         self.comboInputChanel.remove_all()
         #TODO: at the moment just 32 bit recording is supported. Maybe check if other bitdepths make sense too
+        mode = "S32_LE"
         if "S32_LE" in recDeviceInfo[1]:
-            start = 0
-            end = int(recDeviceInfo[0][0])
-            if len(recDeviceInfo[0]) > 1:
-                start = max(int(recDeviceInfo[0][0]) - 1, 0)
-                end = int(recDeviceInfo[0][1])
-            for chanel in range(start, end):
-                self.comboInputChanel.append_text(str(chanel+1))
-            self.comboInputChanel.set_active(0)
             self.execMeasureBtn.set_sensitive(True)
-            self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), self.comboInputChanel.get_active_text() )
         else:
+            mode = recDeviceInfo[1][0]
             self.showMsgBox( "Recording device does not support 32 bit recording(S32_LE)" )
             self.execMeasureBtn.set_sensitive(False)
+        start = 0
+        end = int(recDeviceInfo[0][0])
+        if len(recDeviceInfo[0]) > 1:
+            start = max(int(recDeviceInfo[0][0]) - 1, 0)
+            end = int(recDeviceInfo[0][1])
+        for chanel in range(start, end):
+            self.comboInputChanel.append_text(str(chanel+1))
+        self.comboInputChanel.set_active(0)
+        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), self.comboInputChanel.get_active_text(), mode )
 
     def on_cfgDRC(self,button):
         self.drcCfgDlg.run()
@@ -472,3 +480,4 @@ class DRCDlg:
 
     def on_Cancel(self, some_param):
         self.dlg.set_visible(False)
+        self.inputVolumeUpdate.stop()
