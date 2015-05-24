@@ -36,7 +36,7 @@ $ECHO "of any kind. Please read the file "COPYING" for details."
 $ECHO 
 
 # Command line check
-if [[ $# != 10 && $# != 11 ]]; then
+if [[ $# < 11 ]]; then
  $ECHO "Usage:"
  $ECHO " measure bits rate startf endf lslen lssil indev outdev impfile"
  $ECHO
@@ -67,8 +67,11 @@ OUTDEV="$8"
 IMPFILE="$9"
 AMPLITUDE="${10}"
 REC_CHANNEL="${11}"
-
+PLAY_CHANNEL="${12}"
 SWEEPFILE="sweep.pcm"
+
+# Generate the log sweep
+$ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $REC_CHANNEL $PLAY_CHANNEL
 
 # Check bits to use
 if [ "$BITS" == "24" ]; then
@@ -82,15 +85,26 @@ else
  ARECORDFMT="S16_LE"
 fi
 
-# Generate the log sweep
-$ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $REC_CHANNEL
+$ECHO "sox params : " $SOXFMT
+
+# determine channel to play the sweep to
+
+if [ -z "$PLAY_CHANNEL" ]; then
+ PLAY_SWEEP_PARAM=""
+elif [ "$PLAY_CHANNEL" == "l" ]; then
+ PLAY_SWEEP_PARAM="remix 1 0"
+elif [ "$PLAY_CHANNEL" == "r" ]; then
+ PLAY_SWEEP_PARAM="remix 0 1"
+fi
+
+$ECHO "PLAY_SWEEP_PARAM : " $PLAY_SWEEP_PARAM
 
 $ECHO "generating sweep " $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/msrawsweep.pcm ${TMP}/msinverse.pcm
 $GLSWEEP $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/msrawsweep.pcm ${TMP}/msinverse.pcm
 
 # Convert to WAV file
 $ECHO "Converting sweep to play format..."
-$SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -r $RATE -c 2 $SOXFMT ${TMP}/msplaysweep.wav
+$SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -r $RATE -c 2 $SOXFMT ${TMP}/msplaysweep.wav $PLAY_SWEEP_PARAM
 
 # Filesystem sync
 $ECHO "Waiting 5 seconds for filesystem sync..."
@@ -99,7 +113,6 @@ $SLEEP 5
 
 # Record the sweep
 $ECHO "Sweep recording."
-$ECHO "Measuring channel: left. Reference channel: right."
 $SLEEP 1
 RLEN=$(( $LSLEN + $LSSIL * 2 ))
 $APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
@@ -108,8 +121,14 @@ $ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN ${TMP
 $ECHO "recorded sweep conversion"
 $SOX ${TMP}/msrecsweep.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/mssweep_speaker.pcm remix 1 0
 
+IMP_FILE_PCM="${TMP}/measured_impulse.pcm"
+
 # Extract the impulse response
-$LSCONV ${TMP}/mssweep_speaker.pcm ${TMP}/msinverse.pcm $IMPFILE $REF_PARAM 
+$LSCONV ${TMP}/mssweep_speaker.pcm ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM 
+
+
+#convert the result to wav
+$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav -r $RATE -c 1 $SOXFMT $IMPFILE
 
 $ECHO "Temporary file cleanup..."
 
