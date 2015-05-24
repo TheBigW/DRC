@@ -126,22 +126,19 @@ def LoadRawFile(filename, numChanels, sampleByteSize = 4, offset = 0):
     print("numChanels : ", numChanels)
     filterFile = open( filename, "rb" )
     filter_array = []
+    for chanel in range(0, numChanels):
+        channel_filter = []
+        filter_array.append(channel_filter)
     filterFile.seek(offset)
     readData = filterFile.read( sampleByteSize )
     while len(readData) == sampleByteSize:
-        floatSample = 0.0
         for chanel in range(0, numChanels):
-            floatSample = floatSample + struct.unpack( 'f', readData )[0]
-        readData = filterFile.read( sampleByteSize )
-        if math.isnan(floatSample):
-            print( "value is NaN : resetting to 0" )
-            floatSample = 0
-            #return None
-        if floatSample > (1*numChanels) or floatSample < (-1*numChanels):
-            print( "detected value probably out of range : ", floatSample )
-            #return None
-        filter_array.append( floatSample/numChanels )
-
+            floatSample = struct.unpack( 'f', readData )[0]
+            readData = filterFile.read( sampleByteSize )
+            if math.isnan(floatSample):
+                #print( "value is NaN : resetting to 0" )
+                floatSample = 0
+            filter_array[chanel].append( floatSample )
     #dump the filter to check
     #debugDumpAppliedFilter(filter_array)
     return filter_array
@@ -152,8 +149,20 @@ def LoadWaveFile(filename):
     print("numChanels : ", numChanels)
     return LoadRawFile( filename, numChanels, params.sampleByteSize, params.DataOffset )
 
+def fillTestFilter(filter_kernel):
+    filter_array = filter_kernel
+    numelem = len(filter_array)
+    itFilter = iter(filter_array)
+    next(itFilter)
+    for i in itFilter:
+        filter_array.insert(0, i)
+        next(itFilter)
+    print( "test filter : " + str(filter_array) )
+    return filter_array
+
 def LoadAudioFile(filename, numChannels):
-    filter_array = []
+    filter_array = [[]]
+    #return fillTestFilter( [0.25, 0.23, 0.15, 0.06, 0, -0.06, -0.06, -0.02, 0.0, 0.01, 0.01, 0] ) + fillTestFilter([0.25, 0.06, 0, -0.06, -0.06, -0.02, 0, 0.01, 0.01, 0.0, 0.0, 0.0])
     if filename != '':
         fileExt = os.path.splitext(filename)[-1]
         print("ext = " + fileExt)

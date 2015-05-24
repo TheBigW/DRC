@@ -90,15 +90,18 @@ class InputVolumeProcess():
                 self.progressBar.set_fraction(iValue/100)
 
     def start(self, recHW, chanel, mode = None):
-        self.stop()
-        if mode == None:
-            mode = "S32_LE"
-        #maybe using plughw and see if it removes the dependencies to use that at all
-        volAlsaCmd = ["arecord", "-D"+recHW, "-c" + chanel, "-d0", "-f" + mode, "/dev/null", "-vvv"]
-        print ("starting volume monitoring with : " + str(volAlsaCmd) )
-        self.proc = subprocess.Popen(volAlsaCmd , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.pattern = re.compile("(\d*)%", re.MULTILINE)
-        self.t = threading.Thread(None, target=self.reader_thread).start()
+        try:
+            self.stop()
+            if mode == None:
+                mode = "S32_LE"
+            #maybe using plughw and see if it removes the dependencies to use that at all
+            volAlsaCmd = ["arecord", "-D"+recHW, "-c" + chanel, "-d0", "-f" + mode, "/dev/null", "-vvv"]
+            print ("starting volume monitoring with : " + str(volAlsaCmd) )
+            self.proc = subprocess.Popen(volAlsaCmd , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.pattern = re.compile("(\d*)%", re.MULTILINE)
+            self.t = threading.Thread(None, target=self.reader_thread).start()
+        except Exception as inst:
+            print( 'unexpected exception',  sys.exc_info()[0], type(inst), inst )
 
     def stop(self):
         print ("stoping volume monitoring" )
@@ -120,11 +123,11 @@ class MeasureQADlg():
         okBtn.connect( "clicked", self.on_Ok )
 
         genSweepData = DRCFileTool.LoadAudioFile(genSweepFile, 1)
-        self.setEvalData( genSweepData, "labelInputSweepData" )
+        self.setEvalData( genSweepData[0], "labelInputSweepData" )
         measSweepData = DRCFileTool.LoadAudioFile(measSweepFile, 1)
-        minMaxRec = self.setEvalData( measSweepData, "labelRecordedSweepData" )
+        minMaxRec = self.setEvalData( measSweepData[0], "labelRecordedSweepData" )
         impRespData = DRCFileTool.LoadAudioFile(impRespFile, 1)
-        self.setEvalData( impRespData, "labelImpResponseData" )
+        self.setEvalData( impRespData[0], "labelImpResponseData" )
         #TODO: add evaluation
         label=self.uibuilder.get_object("labelRecomendationResult")
         result = "check values : recorded results seem to be fine to proceed"
@@ -161,12 +164,13 @@ def fillComboFromDeviceList(combo, alsaHardwareList):
     combo.set_active(0)
 
 class DRCDlg:
-    def __init__(self, parent):
-        self.parent = parent
+
+    def initUI(self):
         aCfg = DRCConfig()
         self.uibuilder = Gtk.Builder()
-        self.uibuilder.add_from_file( rb.find_plugin_file(parent, "DRCUI.glade") )
+        self.uibuilder.add_from_file( rb.find_plugin_file(self.parent, "DRCUI.glade") )
         self.dlg = self.uibuilder.get_object("DRCDlg")
+        self.dlg.connect( "close", self.on_close )
         self.filechooserbtn = self.uibuilder.get_object("drcfilterchooserbutton")
         self.filechooserbtn.set_filename(aCfg.filterFile)
         self.filechooserbtn.connect("file-set", self.on_file_selected)
@@ -231,6 +235,9 @@ class DRCDlg:
 
         self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked", self.on_editTargetCurve )
         self.inputVolumeUpdate.stop()
+
+    def __init__(self, parent):
+        self.parent = parent
 
     def on_editTargetCurve(self, widget):
         editDlg = EQControl(self.filechooserbuttonTargetCurve.get_filename(), self.parent)
@@ -353,13 +360,16 @@ class DRCDlg:
 
     def on_execMeasure(self, param):
         self.inputVolumeUpdate.stop()
+
+        exec_2ChannelMeasure = self.uibuilder.get_object("checkbutton_2ChannelMeasure").get_active()
+
         #TODO: make the measure script output the volume and parse from there during measurement
         scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
         impOutputFile = self.getMeasureResultsDir() + "/impOutputFile" + \
                         datetime.datetime.now().strftime("%Y%m%d%H%M%S_") +\
                         str(self.entryStartFrequency.get_text()) +\
                         "_" + str(self.entryEndFrequency.get_text())+\
-                        "_" + str(self.entrySweepDuration.get_text()) + ".pcm"
+                        "_" + str(self.entrySweepDuration.get_text()) + ".wav"
         #execute measure script to generate filters
         commandLine = [scriptName, str(self.sweep_level),
                                 self.getAlsaRecordHardwareString(),
@@ -368,7 +378,8 @@ class DRCDlg:
                                 str(self.entryEndFrequency.get_text()),
                                 str(self.entrySweepDuration.get_text()),
                                 impOutputFile,
-                                self.comboInputChanel.get_active_text()]
+                                self.comboInputChanel.get_active_text(),
+                                str(exec_2ChannelMeasure)]
         p = subprocess.Popen(commandLine, stdout=subprocess.PIPE)
         out, err = p.communicate()
         print( "output from measure script : " + str(out) )
@@ -436,7 +447,7 @@ class DRCDlg:
         drcMethod = self.comboDRC.get_active_text()
         drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
         pluginPath = os.path.dirname(os.path.abspath(drcScript[0] ))
-        filterResultFile = self.getFilterResultsDir() + "/Filter" + str(drcMethod) + datetime.datetime.now().strftime("%Y%m%d%H%M%S") +".pcm"
+        filterResultFile = self.getFilterResultsDir() + "/Filter" + str(drcMethod) + datetime.datetime.now().strftime("%Y%m%d%H%M%S") +".wav"
         impRespFile = self.impResponseFileChooserBtn.get_filename()
         if impRespFile == None:
             self.showMsgBox("no file loaded")
@@ -469,9 +480,11 @@ class DRCDlg:
 
     def show_ui(self, shell, state, dummy):
         print("showing UI")
+        self.initUI()
         self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), self.comboInputChanel.get_active_text() )
         self.dlg.show_all()
         self.dlg.present()
+        self.inputVolumeUpdate.stop()
         print( "done showing UI" )
 
     def on_destroy(self, widget, data):

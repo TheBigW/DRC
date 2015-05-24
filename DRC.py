@@ -47,24 +47,17 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
 
     def updateFilter(self, filterFileName, numChannels = None):
         try:
-            self.shell_player.stop()
-            self.remove_Filter()
+            self.shell_player.pause()
             filter_array = DRCFileTool.LoadAudioFile(filterFileName, numChannels)
             #pass the filter data to the fir filter
             num_filter_coeff = len( filter_array )
             if num_filter_coeff > 0:
-                self.fir_filter.set_property( 'latency', int(num_filter_coeff/2) )
-                print( "num_filter_coeff", num_filter_coeff )
-                kernel = self.fir_filter.get_property('kernel')
-                kernel = []
-                print( "kernel : ", kernel)
-                for i in range(0, num_filter_coeff):
-                    kernel.append( filter_array[i] )
-                    #print( filter_array[i] )
-                #TODO: check possibility to scale filter strength (configurable devisor etc...)
-                self.fir_filter.set_property('kernel', kernel)
+                #self.fir_filter.set_property( 'latency', int(num_filter_coeff/2) )
+                self.fir_filter.set_property('mkernel', filter_array)
+                print( "kernel set")
             self.set_filter()
-            #self.shell_player.play()
+            if self.entry != None:
+                self.shell_player.play_entry(self.entry, self.source)
         except Exception as inst:
             print( 'error updating filter',  sys.exc_info()[0], type(inst), inst )
             pass
@@ -72,6 +65,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
     def do_activate(self):
         try:
             self.duration = 0
+            self.entry = None
             self.selfAllowTriggered = False
             self.filterSet = False
             self.shell = self.object
@@ -156,6 +150,8 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
 
     def playing_song_changed(self, sp, entry):
         self.duration = sp.get_playing_song_duration()
+        self.source = sp.get_playing_source()
+        self.entry = entry
         #print("playing song duration: " + str(self.duration))
         if entry == None or not self.selfAllowTriggered:
             return
@@ -165,7 +161,6 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             clean way would be to check has-prev/has-next but seems to be useless:
             returns true even if no son is previous in current UI list...
         '''
-        source = sp.get_playing_source()
         sp.stop()
         sp.play_entry(entry, source)
         self.selfAllowTriggered = False
