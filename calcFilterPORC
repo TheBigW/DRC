@@ -7,6 +7,7 @@ TARGET_CURVE_FILE="${2}"
 IMPULSE_FILE="${3}"
 FILTER_FILE="${4}"
 RATE="44100"
+TAPS=4096
 
 filename=$(basename "$IMPULSE_FILE")
 extension="${filename##*.}"
@@ -25,5 +26,5 @@ fi
 #going with flat target curve. param -t allows for target curve. e.g -t tact30f.txt
 #filter length 65535 : same as DRC
 echo "calculating filters"
-python $PORC --mixed  -n 65535 -o bin -t "${TARGET_CURVE_FILE}" $IMPULSE_FILE $FILTER_FILE
+python $PORC --mixed  -n $TAPS -o bin -t "${TARGET_CURVE_FILE}" $IMPULSE_FILE $FILTER_FILE
 
