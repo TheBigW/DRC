@@ -116,15 +116,15 @@ $ECHO "Sweep recording."
 $SLEEP 1
 RLEN=$(( $LSLEN + $LSSIL * 2 ))
 $APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
-$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN ${TMP}/msrecsweep.wav
+$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN ${TMP}/msrecsweep${PLAY_CHANNEL}.wav
 
 $ECHO "recorded sweep conversion"
-$SOX ${TMP}/msrecsweep.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/mssweep_speaker.pcm remix 1 0
+$SOX ${TMP}/msrecsweep${PLAY_CHANNEL}.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/msrecsweep${PLAY_CHANNEL}.pcm remix 1 0
 
-IMP_FILE_PCM="${TMP}/measured_impulse.pcm"
+IMP_FILE_PCM="${TMP}/measured_impulse${PLAY_CHANNEL}.pcm"
 
 # Extract the impulse response
-$LSCONV ${TMP}/mssweep_speaker.pcm ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM 
+$LSCONV ${TMP}/msrecsweep${PLAY_CHANNEL}.pcm ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM 
 
 
 #convert the result to wav
