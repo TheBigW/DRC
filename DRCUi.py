@@ -307,8 +307,7 @@ class DRCDlg:
     def slider_changed(self, hscale):
         self.sweep_level = hscale.get_value();
 
-    def on_file_selected(self, widget):
-        DrcFilename= widget.get_filename()
+    def set_filter(self,DrcFilename):
         fileExt = os.path.splitext(DrcFilename)[-1]
         numChanels = None
         print("ext = " + fileExt)
@@ -317,6 +316,10 @@ class DRCDlg:
             if dlg.run() == Gtk.ResponseType.OK:
                 numChanels = dlg.getNumChannels()
         self.parent.updateFilter(DrcFilename, numChanels)
+        return numChanels
+
+    def on_file_selected(self, widget):
+        numChanels = self.set_filter( widget.get_filename() )
         self.saveSettings(numChanels)
 
     def saveSettings(self, numChanels=None):
@@ -386,7 +389,8 @@ class DRCDlg:
         self.uibuilder.get_object("impResponseFileChooserBtn").set_filename(impOutputFile)
         #TODO: check for errors
         #quality check:sweep file and measured result
-        evalDlg = MeasureQADlg(self.parent, "/tmp/msrawsweep.pcm", "/tmp/mssweep_speaker.pcm", impOutputFile)
+        #TODO: do multi channel check
+        evalDlg = MeasureQADlg(self.parent, "/tmp/msrawsweepl.pcm", "/tmp/mssweep_speakerl.pcm", impOutputFile)
         evalDlg.run()
 
     def changeCfgParamDRC(self, bufferStr, changeArray):
@@ -471,6 +475,7 @@ class DRCDlg:
         out, err = p.communicate()
         print( "output from filter calculate script : " + str(out) )
         self.filechooserbtn.set_filename(filterResultFile)
+        self.set_filter(filterResultFile)
 
     def on_close(self, shell):
         print( "closing ui")

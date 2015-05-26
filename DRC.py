@@ -47,6 +47,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
 
     def updateFilter(self, filterFileName, numChannels = None):
         try:
+            source = self.shell_player.get_playing_source()
             self.shell_player.pause()
             filter_array = DRCFileTool.LoadAudioFile(filterFileName, numChannels)
             #pass the filter data to the fir filter
@@ -57,7 +58,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
                 print( "kernel set")
             self.set_filter()
             if self.entry != None:
-                self.shell_player.play_entry(self.entry, self.source)
+                self.shell_player.play_entry(self.entry, source)
         except Exception as inst:
             print( 'error updating filter',  sys.exc_info()[0], type(inst), inst )
             pass
@@ -150,7 +151,6 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
 
     def playing_song_changed(self, sp, entry):
         self.duration = sp.get_playing_song_duration()
-        self.source = sp.get_playing_source()
         self.entry = entry
         #print("playing song duration: " + str(self.duration))
         if entry == None or not self.selfAllowTriggered:
@@ -161,6 +161,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             clean way would be to check has-prev/has-next but seems to be useless:
             returns true even if no son is previous in current UI list...
         '''
+        source = sp.get_playing_source()
         sp.stop()
         sp.play_entry(entry, source)
         self.selfAllowTriggered = False
