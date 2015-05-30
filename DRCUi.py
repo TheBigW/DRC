@@ -236,6 +236,9 @@ class DRCDlg:
         self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked", self.on_editTargetCurve )
         self.inputVolumeUpdate.stop()
 
+        self.exec_2ChannelMeasure = self.uibuilder.get_object("checkbutton_2ChannelMeasure")
+        self.exec_2ChannelMeasure.set_sensitive(self.parent.hasMultiKernel)
+
     def __init__(self, parent):
         self.parent = parent
 
@@ -364,7 +367,7 @@ class DRCDlg:
     def on_execMeasure(self, param):
         self.inputVolumeUpdate.stop()
 
-        exec_2ChannelMeasure = self.uibuilder.get_object("checkbutton_2ChannelMeasure").get_active()
+        self.exec_2ChannelMeasure.get_active()
 
         #TODO: make the measure script output the volume and parse from there during measurement
         scriptName = rb.find_plugin_file(self.parent, "measure1Channel")

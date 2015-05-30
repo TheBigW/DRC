@@ -45,7 +45,20 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
     def __init__(self):
         super(DRCPlugin, self).__init__()
 
+    def set_kernel(self,filter_array):
+        hasMultiKernel=True
+        try:
+            self.fir_filter.set_property('multi-channel-kernel', filter_array)
+        except Exception as inst:
+            print( 'setting multi chanel filter: attempting to set single kernel',  sys.exc_info()[0], type(inst), inst )
+            hasMultiKernel = False
+            self.fir_filter.set_property('kernel', filter_array[0])
+            pass
+        print( "kernel set")
+        return hasMultiKernel
+
     def updateFilter(self, filterFileName, numChannels = None):
+        hasMultiKernel=True
         try:
             source = self.shell_player.get_playing_source()
             self.shell_player.pause()
@@ -53,15 +66,14 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             #pass the filter data to the fir filter
             num_filter_coeff = len( filter_array )
             if num_filter_coeff > 0:
-                #self.fir_filter.set_property( 'latency', int(num_filter_coeff/2) )
-                self.fir_filter.set_property('mkernel', filter_array)
-                print( "kernel set")
+                hasMultiKernel = self.set_kernel(filter_array)
             self.set_filter()
             if self.entry != None:
                 self.shell_player.play_entry(self.entry, source)
         except Exception as inst:
             print( 'error updating filter',  sys.exc_info()[0], type(inst), inst )
             pass
+        return hasMultiKernel
 
     def do_activate(self):
         try:
@@ -75,7 +87,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             self.fir_filter = Gst.ElementFactory.make('audiofirfilter', 'MyFIRFilter')
             #open filter files
             aCfg = DRCConfig()
-            self.updateFilter(aCfg.filterFile, aCfg.numFilterChanels)
+            self.hasMultiKernel=self.updateFilter(aCfg.filterFile, aCfg.numFilterChanels)
             #print( str(dir( self.shell.props)) )
         except Exception as inst:
             print( 'filter not set',  sys.exc_info()[0], type(inst), inst )
