@@ -41,10 +41,10 @@ do
             REMIX_PARAM=""
         fi
         #left channel
-        $SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c $i $PCM_IMP_FILENAME $REMIX_PARAM
+        $SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
     elif [ $i == 2 ]; then
         #right channel
-        $SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c $i $PCM_IMP_FILENAME remix 0 1
+        $SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME remix 0 1
     else
         echo "mhhh multi chanel not properly supported for more than 2 channels yet feel free to add :)"    
     fi
