@@ -115,7 +115,7 @@ class InputVolumeProcess():
 
 class MeasureQADlg():
 
-    def __init__(self, parent, genSweepFile, measSweepFile, impRespFile):
+    def __init__(self, parent, genSweepFile, measSweepFile, impRespFile, sweep_level):
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(rb.find_plugin_file(parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("measureQualityDlg")
@@ -367,8 +367,6 @@ class DRCDlg:
     def on_execMeasure(self, param):
         self.inputVolumeUpdate.stop()
 
-        self.exec_2ChannelMeasure.get_active()
-
         #TODO: make the measure script output the volume and parse from there during measurement
         scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
         impOutputFile = self.getMeasureResultsDir() + "/impOutputFile" + \
@@ -385,7 +383,7 @@ class DRCDlg:
                                 str(self.entrySweepDuration.get_text()),
                                 impOutputFile,
                                 self.comboInputChanel.get_active_text(),
-                                str(exec_2ChannelMeasure)]
+                                str(self.exec_2ChannelMeasure.get_active())]
         p = subprocess.Popen(commandLine, stdout=subprocess.PIPE)
         out, err = p.communicate()
         print( "output from measure script : " + str(out) )
@@ -393,7 +391,12 @@ class DRCDlg:
         #TODO: check for errors
         #quality check:sweep file and measured result
         #TODO: do multi channel check
-        evalDlg = MeasureQADlg(self.parent, "/tmp/msrawsweepl.pcm", "/tmp/mssweep_speakerl.pcm", impOutputFile)
+        strResultSuffix=""
+        if self.exec_2ChannelMeasure.get_active():
+            strResultSuffix="l"
+        raw_sweep_file_base_name = "/tmp/msrawsweep.pcm"
+        raw_sweep_recorded_base_name="/tmp/msrecsweep" + strResultSuffix + ".pcm"
+        evalDlg = MeasureQADlg(self.parent, raw_sweep_file_base_name, raw_sweep_recorded_base_name, impOutputFile, self.sweep_level)
         evalDlg.run()
 
     def changeCfgParamDRC(self, bufferStr, changeArray):
