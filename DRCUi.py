@@ -60,6 +60,7 @@ class DRCCfgDlg():
         cancelBtn.connect( "clicked", self.on_Cancel )
         self.filechooserbuttonMicCalFile = self.uibuilder.get_object("filechooserbuttonMicCalFile")
         self.filechooserbuttonMicCalFile.set_current_folder("/usr/share/drc/mic")
+        self.comboboxtext_norm_method=self.uibuilder.get_object("comboboxtext_norm_method")
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
         self.dlg.set_visible(False)
@@ -68,6 +69,8 @@ class DRCCfgDlg():
         self.dlg.set_visible(False)
     def getMicCalibrationFile(self):
         return self.filechooserbuttonMicCalFile.get_filename()
+    def getNormMethod(self):
+        return self.comboboxtext_norm_method.get_active_text()
     def run(self):
         print("running dlg...")
         return self.dlg.run()
@@ -430,7 +433,11 @@ class DRCDlg:
         srcDrcCfgFile = open( drcCfgSrcFile, "r" )
         srcData = srcDrcCfgFile.read()
         micCalFile = self.drcCfgDlg.getMicCalibrationFile()
-        changeCfgFileArray = [["BCInFile", impRespFile], ["PSPointsFile", self.filechooserbuttonTargetCurve.get_filename()]]
+        normMethod = self.drcCfgDlg.getNormMethod()
+        changeCfgFileArray = [["BCInFile", impRespFile],
+                              ["PSPointsFile", self.filechooserbuttonTargetCurve.get_filename()],
+                              ["PSNormType", normMethod ]
+                             ]
         if micCalFile != None:
             changeCfgFileArray.append( ["MCFilterType","M"] )
             changeCfgFileArray.append( ["MCPointsFile",micCalFile] )

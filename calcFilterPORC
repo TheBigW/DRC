@@ -6,6 +6,7 @@ PORC="${1}"
 TARGET_CURVE_FILE="${2}"
 IMPULSE_FILE="${3}"
 FILTER_FILE="${4}"
+NUM_CHANNELS="${5}"
 RATE="44100"
 TAPS=4096
 
@@ -21,10 +22,22 @@ if [ "$extension" != "wav" ]; then
   sox -t raw -r $RATE -c 1 -e float -b32 ${IMPULSE_FILE} -t wav -r $RATE -e float -b32 ${DEST_WAV}
   IMPULSE_FILE="$DEST_WAV"
   echo "IMPULSE_FILE : " $IMPULSE_FILE
+else
+ #get number of chanels from the wavefile
+ #TODO : test on german installation  whether those matches are language independent 
+ read NUM_CHANNELS <<< $(soxi "${IMPULSE_FILE}" | awk '/Channels/ { print $3 }')
+ read RATE <<< $(soxi "${IMPULSE_FILE}" | awk '/Sample Rate/ { print $4 }')
 fi
 
 #going with flat target curve. param -t allows for target curve. e.g -t tact30f.txt
 #filter length 65535 : same as DRC
 echo "calculating filters"
-python $PORC --mixed  -n $TAPS -o bin -t "${TARGET_CURVE_FILE}" $IMPULSE_FILE $FILTER_FILE
 
+PCM_FILTER=/tmp/PORC_TMP_Filter.pcm
+
+python $PORC --mixed  -n $TAPS -o bin -t "${TARGET_CURVE_FILE}" $IMPULSE_FILE $PCM_FILTER
+
+#convert result to wav
+
+
+sox -t raw -r $RATE -c 2 -e float -b32 ${PCM_FILTER} -t wav -r $RATE -e float -b32 $FILTER_FILE

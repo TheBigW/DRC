@@ -205,7 +205,7 @@ PSPointsFile = /home/tobias/.local/share/rhythmbox/plugins/DRC/DRCFiles/pa-44100
 PSMagType = D
 PSOutWindow = 65536
 PSNormFactor = 1.0
-PSNormType = E
+PSNormType = S
 PSOutFile = rps.pcm
 PSOutFileType = F
 
