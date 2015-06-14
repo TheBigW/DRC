@@ -36,4 +36,6 @@ for installation just copy all files to ${HOME}/.local/share/rhythmbox/plugins/D
 Limitations:    -recording is hardcoded for devices that support S32_LE 32 bit recording format
 		-only fraction of DRC configurable capabilities is there, but files are available for edit in the plugin folder (for DRC adapt erb44100.drc)
 
+for those with some courage to try some new functionality: DRC supports multi channel correction, meaning a separate measure/filter per audio channel. To support this gstreamer plugins-good need to be patched as long as this change gets not a part of the gstreamer-plugins-good (see gst-plugins-good-patch folder) - I use it this way myself on Ubuntu 14.04/15.04.
+
 Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.
