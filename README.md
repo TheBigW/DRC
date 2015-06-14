@@ -15,24 +15,25 @@ measuring plays a configurable sine sweep and measures its room response. For th
 Caution: configure your sweep carefully. It makes obviously no sense to calibrate small desktop speakers for lower than 50Hz (read your speaker specs).
 
 	--> depends on packages: sox, alsa-utils (uses aplay, arecord)
-    for installation on Ubuntu: sudo apt-get install drc python3-autopilot alsa-utils sox
+    for installation on Ubuntu: sudo apt-get install python3-autopilot alsa-utils sox
 
 2) calculate the needed filter to correct room response 
 
-Calculating the filter depends on installed tools. Supported at the moment are PORC and DRC. PORC can be found on github. To use it just download the complet package an get it running by installing all dependencies (mostly python libs). The pugin expects porc to be installed in the plugin folder under a separate folder (./porc/porc.py).
-DRC is part of the default Ubuntu repositories. Once installed it works out of the box.
+Calculating the filter depends on installed tools. Supported at the moment are PORC and DRC. 
 
-	DRC : --> depends on packages: sox, drc
+	DRC : --> depends on packages: sox, drc : sudo apt-get install sox drc
 	PORC : --> depends on packages: sox, porc
-		--> porc depends on python-numpy, python-scipy, python-matplotlib
+		--> for porc: sudo apt-get install python-numpy, python-scipy, python-matplotlib
+            PORC can be found on github. To use it just download the complet package an get it running by installing all dependencies (mostly python libs). The pugin expects porc to be installed in
+            the plugin folder under a separate folder (./porc/porc.py).
 
 3) apply the filter to the played music (load filter and enjoy :) ) --> no further dependencies
 The tool adresses all 3 areas and all can be used independently. E.g. if you measured your room response with a different tool (e.g. REW - RoomEQWizard) it's exported output can also be used at the next step. If you have a filter from a different program (e.g. Dirac, Accurate, PORC, DRC) you can load it directly.
 
 
-for installation just copy all files to HOME/.local/share/rhythmbox/plugins/DRC
+for installation just copy all files to ${HOME}/.local/share/rhythmbox/plugins/DRC
 
 Limitations:    -recording is hardcoded for devices that support S32_LE 32 bit recording format
-		-only fraction of DRC capabilities is there: e.g hardcoded target curve, but files are available for edit in the plugin folder
+		-only fraction of DRC configurable capabilities is there, but files are available for edit in the plugin folder (for DRC adapt erb44100.drc)
 
 Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.
