@@ -15,38 +15,34 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-from gi.repository import GConf
+from XMLSerializer import Serializer
+from gi.repository import RB
 
-DRC_GCONF_BASE_PATH = '/apps/rhythmbox/plugins/DRC'
-	
+DRC_CFG_FILE="DRC.xml"
+
 class DRCConfig:
-	def __init__(self):
-		self.load()
-	def load(self):	
-		conf = GConf.Client.get_default()
-		self.filterFile = conf.get_string( DRC_GCONF_BASE_PATH + '/filterFile' )
-		self.numFilterChanels = conf.get_int( DRC_GCONF_BASE_PATH + '/numFilterChanels' )
-		self.recordGain = conf.get_float( DRC_GCONF_BASE_PATH + '/recordGain' )
-		self.startFrequency = conf.get_int( DRC_GCONF_BASE_PATH + '/startFrequency' )
-		self.endFrequency = conf.get_int( DRC_GCONF_BASE_PATH + '/endFrequency' )
-		self.sweepDuration = conf.get_int( DRC_GCONF_BASE_PATH + '/sweepDuration' )
-		if None == self.filterFile:
-			self.filterFile = ""
-		if None == self.recordGain:
-			self.recordGain = 0.5
-		if None == self.startFrequency:
-			self.startFrequency = 50
-		if None == self.endFrequency:
-			self.endFrequency = 21000
-		if None == self.sweepDuration:
-			self.sweepDuration = 40
-		if None == self.numFilterChanels:
-			self.numFilterChanels = 1
-	def save( self ):
-		conf = GConf.Client.get_default()
-		conf.set_string( DRC_GCONF_BASE_PATH + '/filterFile', self.filterFile if self.filterFile != None else "")
-		conf.set_int( DRC_GCONF_BASE_PATH + '/numFilterChanels', self.numFilterChanels )
-		conf.set_float( DRC_GCONF_BASE_PATH + '/recordGain', self.recordGain )
-		conf.set_int( DRC_GCONF_BASE_PATH + '/startFrequency', self.startFrequency )
-		conf.set_int( DRC_GCONF_BASE_PATH + '/endFrequency', self.endFrequency )
-		conf.set_int( DRC_GCONF_BASE_PATH + '/sweepDuration', self.sweepDuration )
+    def __init__(self):
+        self.cfgFileName = RB.user_cache_dir() + "/DRC/" + DRC_CFG_FILE
+        self.filterFile = ""
+        self.recordGain = 0.5
+        self.startFrequency = 50
+        self.endFrequency = 21000
+        self.sweepDuration = 40
+        self.numFilterChanels = 1
+        self.load()
+    def load(self):
+        try:
+            cfgFile = open(self.cfgFileName,'r')
+            cfg = Serializer.read(cfgFile , self)
+            self.filterFile = cfg.filterFile
+            self.startFrequency = cfg.startFrequency
+            self.endFrequency = cfg.endFrequency
+            self.sweepDuration = cfg.sweepDuration
+            self.numFilterChanels = cfg.numFilterChanels
+        except:
+            print("no cfg existing -> create default")
+            self.save()
+            pass
+    def save( self ):
+        print("saving cfg to : " + self.cfgFileName)
+        Serializer.write(self.cfgFileName, self)
