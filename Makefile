@@ -17,5 +17,3 @@ install:
 	install -m 644 *.glade $(DESTDIR)$(DATADIR)
 	install -m 644 DRC.plugin $(DESTDIR)$(SUBDIR)
 	install -m 644 LICENSE.txt $(DESTDIR)$(SUBDIR)
-	cd po;./install_all.sh $(DESTDIR)$(LOCALEDIR)
-	
