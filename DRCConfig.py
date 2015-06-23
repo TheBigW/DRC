@@ -17,12 +17,16 @@
 
 from XMLSerializer import Serializer
 from gi.repository import RB
+import os
 
 DRC_CFG_FILE="DRC.xml"
 
 class DRCConfig:
     def __init__(self):
-        self.cfgFileName = RB.user_cache_dir() + "/DRC/" + DRC_CFG_FILE
+        configDir = RB.user_cache_dir() + "/DRC"
+        if not os.path.exists(configDir):
+            os.makedirs(configDir)
+        self.cfgFileName = configDir + "/" + DRC_CFG_FILE
         self.filterFile = ""
         self.recordGain = 0.5
         self.startFrequency = 50
