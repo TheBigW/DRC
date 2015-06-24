@@ -187,7 +187,6 @@ class DRCDlg:
         self.entrySweepDuration.set_text( str(aCfg.sweepDuration) )
 
         self.progressbarInputVolume = self.uibuilder.get_object("progressbarInputVolume")
-        self.inputVolumeUpdate = InputVolumeProcess( self.progressbarInputVolume )
 
         self.alsaPlayHardwareCombo = self.uibuilder.get_object("comboOutput")
         self.alsaRecHardwareCombo = self.uibuilder.get_object("comboRecord")
@@ -201,8 +200,9 @@ class DRCDlg:
         fillComboFromDeviceList( self.alsaRecHardwareCombo, self.alsaRecHardwareList)
         self.alsaRecHardwareCombo.connect( "changed", self.on_recDeviceChanged )
         self.comboInputChanel = self.uibuilder.get_object("comboInputChanel")
+        #fill the number of input channels
+        self.updateRecDeviceInfo()
         self.comboInputChanel.connect( "changed", self.on_InputChanelChanged )
-        self.on_recDeviceChanged(self.comboInputChanel)
 
         calcDRCBtn = self.uibuilder.get_object("buttonCalculateFilter")
         calcDRCBtn.connect( "clicked", self.on_calculateDRC )
@@ -216,7 +216,6 @@ class DRCDlg:
 
         apply_closeBtn = self.uibuilder.get_object("apply_closeBtn")
         apply_closeBtn.connect( "clicked", self.on_apply_settings )
-        print(" alsa play HW : ", self.getAlsaPlayHardwareString())
 
         cancel_closeBtn = self.uibuilder.get_object("cancelButton")
         cancel_closeBtn.connect( "clicked", self.on_Cancel )
@@ -237,10 +236,11 @@ class DRCDlg:
         self.drcCfgDlg = DRCCfgDlg(self.parent)
 
         self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked", self.on_editTargetCurve )
-        self.inputVolumeUpdate.stop()
 
         self.exec_2ChannelMeasure = self.uibuilder.get_object("checkbutton_2ChannelMeasure")
         self.exec_2ChannelMeasure.set_sensitive(self.parent.hasMultiKernel)
+        self.volumeUpdateBlocked = False
+        self.inputVolumeUpdate = InputVolumeProcess( self.progressbarInputVolume )
 
     def __init__(self, parent):
         self.parent = parent
@@ -271,11 +271,15 @@ class DRCDlg:
         print( "No. supported Modes : " + str(len(supportedModes)) )
         return [numChanels, supportedModes]
 
-    def on_InputChanelChanged(self, combo):
-        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), combo.get_active_text() )
+    def startInputVolumeUpdate(self, channel):
+        if not self.volumeUpdateBlocked:
+            self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), channel )
 
-    def on_recDeviceChanged(self,combo):
-        self.inputVolumeUpdate.stop()
+    def on_InputChanelChanged(self, combo):
+        self.startInputVolumeUpdate( combo.get_active_text() )
+
+    def updateRecDeviceInfo(self):
+        self.volumeUpdateBlocked = True
         recDeviceInfo = self.getRecordingDeviceInfo()
         self.comboInputChanel.remove_all()
         #TODO: at the moment just 32 bit recording is supported. Maybe check if other bitdepths make sense too
@@ -293,8 +297,12 @@ class DRCDlg:
             end = int(recDeviceInfo[0][1])
         for chanel in range(start, end):
             self.comboInputChanel.append_text(str(chanel+1))
+        self.volumeUpdateBlocked = False
         self.comboInputChanel.set_active(0)
-        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), self.comboInputChanel.get_active_text(), mode )
+        return mode
+
+    def on_recDeviceChanged(self,combo):
+        mode = self.updateRecDeviceInfo()
 
     def on_cfgDRC(self,button):
         self.drcCfgDlg.run()
@@ -499,10 +507,8 @@ class DRCDlg:
     def show_ui(self, shell, state, dummy):
         print("showing UI")
         self.initUI()
-        self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), self.comboInputChanel.get_active_text() )
         self.dlg.show_all()
         self.dlg.present()
-        self.inputVolumeUpdate.stop()
         print( "done showing UI" )
 
     def on_destroy(self, widget, data):
