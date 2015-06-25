@@ -100,7 +100,7 @@ class InputVolumeProcess():
             #maybe using plughw and see if it removes the dependencies to use that at all
             volAlsaCmd = ["arecord", "-D"+recHW, "-c" + chanel, "-d0", "-f" + mode, "/dev/null", "-vvv"]
             print ("starting volume monitoring with : " + str(volAlsaCmd) )
-            self.proc = subprocess.Popen(volAlsaCmd , stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.proc = subprocess.Popen(volAlsaCmd)
             self.pattern = re.compile("(\d*)%", re.MULTILINE)
             self.t = threading.Thread(None, target=self.reader_thread).start()
         except Exception as inst:
@@ -154,8 +154,8 @@ class MeasureQADlg():
         return self.dlg.run()
 
 def getDeviceListFromAlsaOutput( command ):
-    p = subprocess.Popen([command, "-l"], stdout=subprocess.PIPE)
-    out, err = p.communicate()
+    p = subprocess.Popen([command, "-l"], 0, None, None, subprocess.PIPE, subprocess.PIPE)
+    (out, err) = p.communicate()
     pattern = re.compile("\w* (\d*):\s.*?\[(.*?)\],\s.*?\s(\d*):.*?\s\[(.*?)\]", re.MULTILINE)
     alsaHardwareList = pattern.findall(str(out))
     print("found pattern : " + str(alsaHardwareList) )
@@ -251,9 +251,11 @@ class DRCDlg:
             self.filechooserbuttonTargetCurve.set_filename( editDlg.getTargetCurveFile() )
 
     def getRecordingDeviceInfo(self):
-        p = subprocess.Popen(["arecord"] + ["-D", self.getAlsaRecordHardwareString(), "--dump-hw-params"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        print("hw infos : " + str(err))
+        params = ['arecord','-D', self.getAlsaRecordHardwareString(), '--dump-hw-params']
+        print("executing: " + str(params) )
+        p = subprocess.Popen(params, 0, None, None, subprocess.PIPE, subprocess.PIPE)
+        (out, err) = p.communicate()
+        print("hw infos : err : " + str(err) + " out : " + str(out) )
         #I rely on channels as it seems to be not translated
         pattern = re.compile("CHANNELS:\s\[?(\d{1,2})\s?(\d{1,2})?\]?", re.MULTILINE)
         numChanels = pattern.findall(str(err))
@@ -395,9 +397,9 @@ class DRCDlg:
                                 impOutputFile,
                                 self.comboInputChanel.get_active_text(),
                                 str(self.exec_2ChannelMeasure.get_active())]
-        p = subprocess.Popen(commandLine, stdout=subprocess.PIPE)
-        out, err = p.communicate()
-        print( "output from measure script : " + str(out) )
+        p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE, subprocess.PIPE)
+        (out, err) = p.communicate()
+        print( "output from measure script : " + str(out) + " error : " + str(None) )
         self.uibuilder.get_object("impResponseFileChooserBtn").set_filename(impOutputFile)
         #TODO: check for errors
         #quality check:sweep file and measured result
@@ -492,8 +494,8 @@ class DRCDlg:
         drcScript.append(impRespFile)
         drcScript.append(filterResultFile)
         print( "drc command line: " + str(drcScript) )
-        p = subprocess.Popen( drcScript, stdout=subprocess.PIPE)
-        out, err = p.communicate()
+        p = subprocess.Popen( drcScript, 0, None, None, subprocess.PIPE, subprocess.PIPE)
+        (out, err) = p.communicate()
         print( "output from filter calculate script : " + str(out) )
         self.filechooserbtn.set_filename(filterResultFile)
         self.set_filter(filterResultFile)
