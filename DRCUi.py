@@ -251,7 +251,7 @@ class DRCDlg:
             self.filechooserbuttonTargetCurve.set_filename( editDlg.getTargetCurveFile() )
 
     def getRecordingDeviceInfo(self):
-        params = ['arecord','-D', self.getAlsaRecordHardwareString(), '--dump-hw-params']
+        params = ['arecord','-D', self.getAlsaRecordHardwareString(), '--dump-hw-params', '-d 1']
         print("executing: " + str(params) )
         p = subprocess.Popen(params, 0, None, None, subprocess.PIPE, subprocess.PIPE)
         (out, err) = p.communicate()
