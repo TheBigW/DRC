@@ -266,7 +266,7 @@ class DRCDlg:
             numChanels = [numChanels[0][0]]
         else:
             numChanels = [numChanels[0][0], numChanels[0][1]]
-        pattern = re.compile("-\s(.?\d*_\w*)", re.MULTILINE)
+        pattern = re.compile("(\D\d+_\w*)", re.MULTILINE)
         supportedModes = pattern.findall(str(err))
 
         print( "numChannels : " + str(numChanels) )
