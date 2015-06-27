@@ -10,37 +10,38 @@ It can handle 32bit float mono filters as e.g. produced by PORC (search PORC on 
 
 There are 3 steps in the process of DRC which can be executed independently. If no other tools are used (e.g. DRCDesigner, Room EQ Wizard, Dirac, Accurate) the complete steps from measurment, filter calculation and fillter usage can be done by this plugin.
 
-<h3>1) measure room response<h3/>
+<h3>1) measure room response</h3>
 
 measuring plays a configurable sine sweep and measures its room response. For that purpose calibrated measurment equipment is needed. I use a calibrated Behringer ECM8000 and a Focusrite 2i2 USB audio interface. In any case the device needs to suport recording in the 32bit float format (S32_LE). All other devices will be shown but the measure-button will stay disabled. In case you already have a recorded Impulse response just proceed with step 2 (calculating your filter)
 
-<h4>Caution:<h4/>
+<h4>Caution:</h4>
 
 configure your sweep carefully. It makes obviously no sense to calibrate small desktop speakers for lower than 50Hz start frequency (read your speaker specs). It is also advisable to start sweep play with lower volumes to not damage the equipment or you ears! The volume can be slowly turned up until a maximum is reached that does not make the furniture in your room vibrate as this will also cause artefacts.
 
 Generally the longer and the louder the measurmenet is done the better the results (signal to noise ratio). Usually a 20s sweep gives good results already.
 
-<h3>2) calculate the needed filter to correct room response <h3/>
+<h3>2) calculate the needed filter to correct room response </h3>
 
 Calculating the filter depends on installed tools. Supported at the moment are PORC and DRC. Any way of created impulse response audio file can be used: either created by previous measurement step or by a another external tool.
 
-<h3>3) apply the filter to the played music<h3/>
+<h3>3) apply the filter to the played music</h3>
 
 load filter and enjoy :) --> no further dependencies
 
 for installation just copy all files to ${HOME}/.local/share/rhythmbox/plugins/DRC
 
-<h4>Limitations<h4/>
+<h4>Limitations</h4>
 
 only fraction of DRC configurable capabilities is there, but files are available for edit in the plugin folder (for DRC adapt erb44100.drc)
 		
-<h3>Dependencies<h3/>
-<h4>For measurment funtionality<h4/>
+<h3>Dependencies</h3>
+
+<h4>For measurment funtionality</h4>
 
 depends on packages: sox, alsa-utils (uses aplay, arecord)
 for installation on Ubuntu: sudo apt-get install alsa-utils sox
     
-<h4>Filter creation functionality<h4/>
+<h4>Filter creation functionality</h4>
 
 	DRC :  depends on packages: sox, drc : sudo apt-get install sox drc
 	PORC : depends on packages: sox, porc
