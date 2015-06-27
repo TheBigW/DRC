@@ -174,7 +174,12 @@ class DRCDlg:
         self.uibuilder.add_from_file( rb.find_plugin_file(self.parent, "DRCUI.glade") )
         self.dlg = self.uibuilder.get_object("DRCDlg")
         self.dlg.connect( "close", self.on_close )
+        audioFileFilter = Gtk.FileFilter()
+        audioFileFilter.add_pattern("*.wav")
+        audioFileFilter.add_pattern("*.pcm")
+        audioFileFilter.add_pattern("*.raw")
         self.filechooserbtn = self.uibuilder.get_object("drcfilterchooserbutton")
+        self.filechooserbtn.set_filter(audioFileFilter)
         self.filechooserbtn.set_filename(aCfg.filterFile)
         self.filechooserbtn.connect("file-set", self.on_file_selected)
         self.filechooserbtn.set_current_folder( self.getFilterResultsDir() )
@@ -222,6 +227,7 @@ class DRCDlg:
 
         self.impResponseFileChooserBtn = self.uibuilder.get_object("impResponseFileChooserBtn")
         self.impResponseFileChooserBtn.set_current_folder( self.getMeasureResultsDir() )
+        self.impResponseFileChooserBtn.set_filter(audioFileFilter)
         self.filechooserbuttonTargetCurve = self.uibuilder.get_object("filechooserbuttonTargetCurve")
         self.filechooserbuttonTargetCurve.set_current_folder("/usr/share/drc/target/44.1 kHz")
         self.comboDRC = self.uibuilder.get_object("combo_drc_type")
@@ -342,8 +348,10 @@ class DRCDlg:
         return numChanels
 
     def on_file_selected(self, widget):
-        numChanels = self.set_filter( widget.get_filename() )
-        self.saveSettings(numChanels)
+        filterFile=widget.get_filename()
+        if os.path.isfile(filterFile):
+            numChanels = self.set_filter( filterFile )
+            self.saveSettings(numChanels)
 
     def saveSettings(self, numChanels=None):
         aCfg = DRCConfig()
@@ -519,6 +527,7 @@ class DRCDlg:
         self.startInputVolumeUpdate()
         self.dlg.show_all()
         self.dlg.present()
+        self.inputVolumeUpdate.stop()
         print( "done showing UI" )
 
     def on_destroy(self, widget, data):
