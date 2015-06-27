@@ -180,9 +180,12 @@ class DRCDlg:
         audioFileFilter.add_pattern("*.raw")
         self.filechooserbtn = self.uibuilder.get_object("drcfilterchooserbutton")
         self.filechooserbtn.set_filter(audioFileFilter)
-        self.filechooserbtn.set_filename(aCfg.filterFile)
+        if os.path.isfile(aCfg.filterFile):
+            self.filechooserbtn.set_filename()
+        else:
+            self.filechooserbtn.set_current_folder( self.getFilterResultsDir() )
+
         self.filechooserbtn.connect("file-set", self.on_file_selected)
-        self.filechooserbtn.set_current_folder( self.getFilterResultsDir() )
 
         self.entryStartFrequency = self.uibuilder.get_object("entryStartFrequency")
         self.entryEndFrequency = self.uibuilder.get_object("entryEndFrequency")
@@ -482,6 +485,7 @@ class DRCDlg:
         cachedir = RB.user_cache_dir() + "/DRC"
         filterResultsDir = cachedir + "/DRCFilters"
         if not os.path.exists(filterResultsDir):
+            print("DRC cache dir does not exist : creating -> " + filterResultsDir)
             os.makedirs(filterResultsDir)
         return filterResultsDir
 
