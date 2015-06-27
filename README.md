@@ -9,10 +9,14 @@ For a more advanced explanation google e.g. for the DRC tool documentation( "DRC
 It can handle 32bit float mono filters as e.g. produced by PORC (search PORC on github) or DRCDesigner (also on github) and allows for one measuring/filter creation as well. Once the filter (from the plugin or external tools) is produced it can be loaded with this plugin to alow for music correction during play.
 
 There are 3 steps in the process of DRC which can be executed independently. If no other tools are used (e.g. DRCDesigner, Room EQ Wizard, Dirac, Accurate) the complete steps from measurment, filter calculation and fillter usage can be done by this plugin.
+In case of strating from scratch just exectute all 3 stages of the procedure. Each step produces the output of the next step.
 
 <h3>1) measure room response</h3>
 
-measuring plays a configurable sine sweep and measures its room response. For that purpose calibrated measurment equipment is needed. I use a calibrated Behringer ECM8000 and a Focusrite 2i2 USB audio interface. In any case the device needs to suport recording in the 32bit float format (S32_LE). All other devices will be shown but the measure-button will stay disabled. In case you already have a recorded Impulse response just proceed with step 2 (calculating your filter)
+measuring plays a configurable sine sweep and measures its room response. For that purpose calibrated measurment equipment is needed. I use a calibrated Behringer ECM8000 and a Focusrite 2i2 USB audio interface. In any case the device needs to suport recording in the 32bit float format (S32_LE). All other devices will be shown but the measure-button will stay disabled. In case you already have a recorded Impulse response just proceed with step 2 (calculating your filter).
+You need to select the proper input/output device and for input the correct channel where your microphone is corrected. The recorded signal is monitored for quality and a dialog is shown with the evaluation results after measurement.
+
+output: impulse response file which can be loaded to the filter correction
 
 <h4>Caution:</h4>
 
@@ -23,6 +27,8 @@ Generally the longer and the louder the measurmenet is done the better the resul
 <h3>2) calculate the needed filter to correct room response </h3>
 
 Calculating the filter depends on installed tools. Supported at the moment are PORC and DRC. Any way of created impulse response audio file can be used: either created by previous measurement step or by a another external tool.
+
+output: a 32 bit audio file containing the filter than can be loaded for the room correction
 
 <h3>3) apply the filter to the played music</h3>
 
