@@ -603,7 +603,6 @@
                 <property name="can_focus">False</property>
                 <property name="halign">center</property>
                 <property name="valign">start</property>
-                <property name="action">save</property>
                 <property name="title" translatable="yes">Save target curve</property>
               </object>
               <packing>
@@ -737,37 +736,19 @@ Please select:</property>
               </packing>
             </child>
             <child>
-              <object class="GtkRadioButton" id="radiobutton_1Channel">
-                <property name="label" translatable="yes">1 Channel (Mono)</property>
+              <object class="GtkComboBoxText" id="comboboxtextChannels">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">False</property>
-                <property name="xalign">0</property>
-                <property name="active">True</property>
-                <property name="draw_indicator">True</property>
-                <property name="group">radiobutton_2Channel</property>
+                <property name="can_focus">False</property>
+                <property name="active">0</property>
+                <items>
+                  <item id="ID1" translatable="yes">1</item>
+                  <item id="ID2" translatable="yes">2</item>
+                </items>
               </object>
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
                 <property name="position">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkRadioButton" id="radiobutton_2Channel">
-                <property name="label" translatable="yes">2 Channel (Stereo)</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">False</property>
-                <property name="xalign">0</property>
-                <property name="active">True</property>
-                <property name="draw_indicator">True</property>
-                <property name="group">radiobutton_1Channel</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">2</property>
               </packing>
             </child>
           </object>
@@ -893,6 +874,13 @@ Please select:</property>
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkListStore" id="liststore1"/>
+  <object class="GtkComboBox" id="comboboxChannels">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="model">liststore1</property>
+    <property name="button_sensitivity">off</property>
   </object>
   <object class="GtkDialog" id="measureQualityDlg">
     <property name="can_focus">False</property>

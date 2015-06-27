@@ -14,7 +14,7 @@ class Serializer(object):
             print( strMember + " : " + strType )
             if (strType.find("descriptor") == -1) and (strType.find("function") == -1) and (strType.find("method") ==-1) and (strMember.find("__") != 0):
                 strSerializeMembers.append(strMember)
-        print( "Serialize considered members : " + str(strSerializeMembers) )
+        #print( "Serialize considered members : " + str(strSerializeMembers) )
         return strSerializeMembers
     @staticmethod
     def SerializeArray(XMLParent, arrayInst):
@@ -23,7 +23,7 @@ class Serializer(object):
     @staticmethod
     def SerializeMember(XMLParent, MemberName, newValue):
         strType = str(type(newValue))
-        print( "serialize type : " + strType )
+        #print( "serialize type : " + strType )
         if strType.find("instance") != -1:
             XMLParent = ET.SubElement(XMLParent, MemberName)
             Serializer.SerializeClass(newValue, XMLParent )
@@ -82,13 +82,13 @@ class Serializer(object):
     def DeserializeClass(SerializeObject, rootElem):
         strSerMemberNames = Serializer.getSerializeMembers(SerializeObject)
         for strElem, xmlChildElem in zip(strSerMemberNames, rootElem):
-            print("Deserializing : " +  strElem + " : ")
-            print(str(xmlChildElem.text) )
+            #print("Deserializing : " +  strElem + " : ")
+            #print(str(xmlChildElem.text) )
             setattr(SerializeObject, strElem, Serializer.DeserializeMember(xmlChildElem, getattr(SerializeObject, strElem ) ) )
         return SerializeObject
     @staticmethod
     def DeSerialize(strXmlString, SerializeObject):
         strClassName = SerializeObject.__str__()
-        print( "className : " + strClassName )
+        #print( "className : " + strClassName )
         root = ET.fromstring(strXmlString)
         return Serializer.DeserializeClass(SerializeObject, root)

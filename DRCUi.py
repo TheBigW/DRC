@@ -28,26 +28,28 @@ class ChanelSelDlg():
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(rb.find_plugin_file(parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("channel_no_dlg")
+        self.check2ChanCombo = self.uibuilder.get_object("comboboxtextChannels")
+        self.check2ChanCombo.connect( "changed", self.onChannelSelChanged )
+        self.numChannels = 1
         okBtn = self.uibuilder.get_object("button_OK")
         okBtn.connect( "clicked", self.on_Ok )
         cancelBtn = self.uibuilder.get_object("button_Cancel")
         cancelBtn.connect( "clicked", self.on_Cancel )
-
+    def onChannelSelChanged(self, combo):
+        selText = self.check2ChanCombo.get_active_text()
+        print( "selected number of channels = " + selText )
+        self.numChannels = int(selText)
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
-        self.dlg.destroy()
+        self.dlg.set_visible(False)
     def on_Cancel(self, param):
         self.dlg.response(Gtk.ResponseType.CANCEL)
-        self.dlg.destroy()
+        self.dlg.set_visible(False)
     def run(self):
-        print("running dlg...")
+        print("running ChanelSelDlg...")
         return self.dlg.run()
     def getNumChannels(self):
-        numChanels = 1
-        check2Chan = self.uibuilder.get_object("radiobutton_2Channel")
-        if check2Chan.get_active() == True:
-            numChanels = 2
-        return numChanels
+        return self.numChannels
 
 class DRCCfgDlg():
     def __init__(self, parent):
@@ -181,7 +183,7 @@ class DRCDlg:
         self.filechooserbtn = self.uibuilder.get_object("drcfilterchooserbutton")
         self.filechooserbtn.set_filter(audioFileFilter)
         if os.path.isfile(aCfg.filterFile):
-            self.filechooserbtn.set_filename()
+            self.filechooserbtn.set_filename(aCfg.filterFile)
         else:
             self.filechooserbtn.set_current_folder( self.getFilterResultsDir() )
 
@@ -243,6 +245,7 @@ class DRCDlg:
         self.comboDRC.connect("changed", self.on_DRCTypeChanged)
         self.on_DRCTypeChanged(self.comboDRC)
         self.drcCfgDlg = DRCCfgDlg(self.parent)
+        self.channelSelDlg = ChanelSelDlg(self.parent)
 
         self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked", self.on_editTargetCurve )
 
@@ -344,9 +347,8 @@ class DRCDlg:
         numChanels = None
         print("ext = " + fileExt)
         if fileExt != ".wav":
-            dlg = ChanelSelDlg(self.parent)
-            if dlg.run() == Gtk.ResponseType.OK:
-                numChanels = dlg.getNumChannels()
+            if self.channelSelDlg.run() == Gtk.ResponseType.OK:
+                numChanels = self.channelSelDlg.getNumChannels()
         self.parent.updateFilter(DrcFilename, numChanels)
         return numChanels
 
