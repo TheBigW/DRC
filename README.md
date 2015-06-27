@@ -15,6 +15,7 @@ There are 3 steps in the process of DRC which can be executed independently. If 
 measuring plays a configurable sine sweep and measures its room response. For that purpose calibrated measurment equipment is needed. I use a calibrated Behringer ECM8000 and a Focusrite 2i2 USB audio interface. In any case the device needs to suport recording in the 32bit float format (S32_LE). All other devices will be shown but the measure-button will stay disabled. In case you already have a recorded Impulse response just proceed with step 2 (calculating your filter)
 
 <b>Caution:<b/>
+
 configure your sweep carefully. It makes obviously no sense to calibrate small desktop speakers for lower than 50Hz start frequency (read your speaker specs). It is also advisable to start sweep play with lower volumes to not damage the equipment or you ears! The volume can be slowly turned up until a maximum is reached that does not make the furniture in your room vibrate as this will also cause artefacts.
 
 Generally the longer and the louder the measurmenet is done the better the results (signal to noise ratio). Usually a 20s sweep gives good results already.
