@@ -85,7 +85,7 @@ class InputVolumeProcess():
     def reader_thread(self):
         for line in iter(self.proc.stdout.readline, b''):
             strLine = str(line)
-            #print(strLine)
+            #print("reader_thread : " + strLine)
             result = self.pattern.findall(strLine)
             if len(result) > 0:
                 #print("arecord: result : "+str(result))
@@ -100,7 +100,7 @@ class InputVolumeProcess():
             #maybe using plughw and see if it removes the dependencies to use that at all
             volAlsaCmd = ["arecord", "-D"+recHW, "-c" + chanel, "-d0", "-f" + mode, "/dev/null", "-vvv"]
             print ("starting volume monitoring with : " + str(volAlsaCmd) )
-            self.proc = subprocess.Popen(volAlsaCmd)
+            self.proc = subprocess.Popen(volAlsaCmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT )
             self.pattern = re.compile("(\d*)%", re.MULTILINE)
             self.t = threading.Thread(None, target=self.reader_thread).start()
         except Exception as inst:
@@ -240,6 +240,7 @@ class DRCDlg:
         self.exec_2ChannelMeasure = self.uibuilder.get_object("checkbutton_2ChannelMeasure")
         self.exec_2ChannelMeasure.set_sensitive(self.parent.hasMultiKernel)
         self.volumeUpdateBlocked = False
+        self.mode = None
         self.inputVolumeUpdate = InputVolumeProcess( self.progressbarInputVolume )
 
     def __init__(self, parent):
@@ -273,9 +274,11 @@ class DRCDlg:
         print( "No. supported Modes : " + str(len(supportedModes)) )
         return [numChanels, supportedModes]
 
-    def startInputVolumeUpdate(self, channel):
+    def startInputVolumeUpdate(self, channel = None):
+        if channel is None:
+            channel = self.comboInputChanel.get_active_text()
         if not self.volumeUpdateBlocked:
-            self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), channel )
+            self.inputVolumeUpdate.start( self.getAlsaRecordHardwareString(), channel, self.mode )
 
     def on_InputChanelChanged(self, combo):
         self.startInputVolumeUpdate( combo.get_active_text() )
@@ -285,11 +288,15 @@ class DRCDlg:
         recDeviceInfo = self.getRecordingDeviceInfo()
         self.comboInputChanel.remove_all()
         #TODO: at the moment just 32 bit recording is supported. Maybe check if other bitdepths make sense too
-        mode = "S32_LE"
+        self.mode = "S32_LE"
         if "S32_LE" in recDeviceInfo[1]:
             self.execMeasureBtn.set_sensitive(True)
         else:
-            mode = recDeviceInfo[1][0]
+            if len(recDeviceInfo[1]) < 1:
+                print("no mode extracted : assuming S16_LE in that case")
+                self.mode = "S16_LE"
+            else:
+                self.mode = recDeviceInfo[1][0]
             self.showMsgBox( "Recording device does not support 32 bit recording(S32_LE)" )
             self.execMeasureBtn.set_sensitive(False)
         start = 0
@@ -298,10 +305,10 @@ class DRCDlg:
             start = max(int(recDeviceInfo[0][0]) - 1, 0)
             end = int(recDeviceInfo[0][1])
         for chanel in range(start, end):
-            self.comboInputChanel.append_text(str(chanel+1))
+            self.comboInputChanel.append_text(str(chanel + 1))
         self.volumeUpdateBlocked = False
         self.comboInputChanel.set_active(0)
-        return mode
+        return self.mode
 
     def on_recDeviceChanged(self,combo):
         mode = self.updateRecDeviceInfo()
@@ -509,6 +516,7 @@ class DRCDlg:
     def show_ui(self, shell, state, dummy):
         print("showing UI")
         self.initUI()
+        self.startInputVolumeUpdate()
         self.dlg.show_all()
         self.dlg.present()
         print( "done showing UI" )
