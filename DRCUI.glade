@@ -148,7 +148,7 @@
                       <object class="GtkLabel" id="labelInputChanel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Input Chanel</property>
+                        <property name="label" translatable="yes">Input Channel</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -976,7 +976,7 @@ Please select:</property>
           <object class="GtkLabel" id="labelRecommendation">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">recomendation:</property>
+            <property name="label" translatable="yes">recommendation:</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>
@@ -991,7 +991,7 @@ Please select:</property>
           <object class="GtkLabel" id="labelRecomendationResult">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">dummy: recomendation to go here</property>
+            <property name="label" translatable="yes">dummy: recommendation to go here</property>
           </object>
           <packing>
             <property name="expand">False</property>
