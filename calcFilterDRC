@@ -57,7 +57,10 @@ do
     PCM_FILTERS[i]=$WAV_FILTER
 done
 
-#merge all filters into one wave
-echo "merging all filters : " ${PCM_FILTERS[1]} ${PCM_FILTERS[2]} ${FILTER_FILE}
-sox -M ${PCM_FILTERS[1]} ${PCM_FILTERS[2]} ${FILTER_FILE}
-
+if [ $NUM_CHANNELS == 1 ]; then
+    cp ${PCM_FILTERS[1]} ${FILTER_FILE}
+else
+    #merge all filters into one wave
+    echo "merging all filters : " ${PCM_FILTERS[1]} ${PCM_FILTERS[2]} ${FILTER_FILE}
+    sox -M ${PCM_FILTERS[1]} ${PCM_FILTERS[2]} ${FILTER_FILE}
+fi
