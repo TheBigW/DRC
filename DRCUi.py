@@ -251,6 +251,7 @@ class DRCDlg:
 
         self.exec_2ChannelMeasure = self.uibuilder.get_object("checkbutton_2ChannelMeasure")
         self.exec_2ChannelMeasure.set_sensitive(self.parent.hasMultiKernel)
+        self.notebook = self.uibuilder.get_object("notebook1")
         self.volumeUpdateBlocked = False
         self.mode = None
         self.inputVolumeUpdate = InputVolumeProcess( self.progressbarInputVolume )
@@ -431,6 +432,7 @@ class DRCDlg:
         raw_sweep_recorded_base_name="/tmp/msrecsweep" + strResultSuffix + ".pcm"
         evalDlg = MeasureQADlg(self.parent, raw_sweep_file_base_name, raw_sweep_recorded_base_name, impOutputFile, self.sweep_level)
         evalDlg.run()
+        self.notebook.next_page()
 
     def changeCfgParamDRC(self, bufferStr, changeArray):
         newBuff = bufferStr
@@ -520,6 +522,7 @@ class DRCDlg:
         print( "output from filter calculate script : " + str(out) )
         self.filechooserbtn.set_filename(filterResultFile)
         self.set_filter(filterResultFile)
+        self.notebook.next_page()
 
     def on_close(self, shell):
         print( "closing ui")
