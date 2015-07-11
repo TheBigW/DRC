@@ -43,7 +43,7 @@ def writeTargetCurveFile(targetCurveFile, data):
         data.append( (22050, -100.0) )
     with open(targetCurveFile, "w") as fp:
         for lineData in data:
-            print("{} {}".format(int(lineData[0]), lineData[1]), file=fp)
+            print("{:.2f} {:.2f}".format( lineData[0], lineData[1]), file=fp)
 
 class LabeledEdit:
     def __init__(self, box, text, value, strDescription = None):

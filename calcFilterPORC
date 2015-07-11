@@ -33,7 +33,7 @@ fi
 #filter length 65535 : same as DRC
 echo "removing leading silence for mixed-min phase mode"
 REM_SILENCE_IMP_FILE=/tmp/rem_silence_imp.wav
-sox $IMPULSE_FILE $REM_SILENCE_IMP_FILE silence 1 0.003 0.005%
+sox $IMPULSE_FILE $REM_SILENCE_IMP_FILE silence 1 0.0005 0.002%
 
 echo "calculating filters"
 
