@@ -41,7 +41,7 @@ for installation just copy all files to ${HOME}/.local/share/rhythmbox/plugins/D
 only fraction of DRC configurable capabilities is there, but files are available for edit in the plugin folder (for DRC adapt erb44100.drc)
 		
 <h3>Dependencies</h3>
-
+genarly depends on python3-lxml for configuration support (needed to load the module)
 <h4>For measurment funtionality</h4>
 
 depends on packages: sox, alsa-utils (uses aplay, arecord)
