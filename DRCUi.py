@@ -338,7 +338,14 @@ class DRCDlg:
             self.cfgDRCButton.hide()
             drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
             pluginPath = os.path.dirname(os.path.abspath(drcScript[0] ))
-            self.filechooserbuttonTargetCurve.set_filename( pluginPath + "/porc/data/tact30f.txt")
+            porcTargetCurve = pluginPath + "/porc/data/tact30f.txt"
+            if not os.path.exists(porcTargetCurve):
+                 print("installing PORC")
+                 installScript=rb.find_plugin_file(self.parent, "installPORC.sh")
+                 pluginPath=os.path.dirname(installScript)
+                 porcInstCommand = "xterm -e " + installScript + " " + pluginPath
+                 subprocess.call( porcInstCommand, shell=True)
+            self.filechooserbuttonTargetCurve.set_filename( )
 
     def slider_changed(self, hscale):
         self.sweep_level = hscale.get_value();

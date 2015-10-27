@@ -13,6 +13,7 @@ install:
 	install -m 644 *.py $(DESTDIR)$(SUBDIR)
 	install -m 755 calcFilter* $(DESTDIR)$(DATADIR)
 	install -m 755 measure* $(DESTDIR)$(DATADIR)
+	install -m 755 installPORC.sh $(DESTDIR)$(DATADIR)
 	install -m 644 erb44100.drc $(DESTDIR)$(DATADIR)
 	install -m 644 *.glade $(DESTDIR)$(DATADIR)
 	install -m 644 DRC.plugin $(DESTDIR)$(SUBDIR)
