@@ -18,6 +18,7 @@ APLAY="aplay"
 ARECORD="arecord"
 SYNC="sync"
 SLEEP="sleep"
+TEST_MODE=false
 
 # Default parameters
 TMP="/tmp"
@@ -35,26 +36,6 @@ $ECHO "the GNU GPL and is provided to you as is, without any warranty"
 $ECHO "of any kind. Please read the file "COPYING" for details."
 $ECHO 
 
-# Command line check
-if [[ $# < 11 ]]; then
- $ECHO "Usage:"
- $ECHO " measure bits rate startf endf lslen lssil indev outdev impfile"
- $ECHO
- $ECHO " bits: measuring bits (16 or 24)"
- $ECHO " rate: sample rate"
- $ECHO " startf: sweep start frequency in Hz"
- $ECHO " endf: sweep end frequency in Hz"
- $ECHO " lslen: log sweep length in seconds"
- $ECHO " lssil: log sweep silence length in seconds"
- $ECHO " indev: ALSA input device"
- $ECHO " outdev: ALSA output device"
- $ECHO " amplitude of sweep file 0.1 .. 1" 
- $ECHO " recording chanel to use (device dependend 1..n)" 
- $ECHO "example: measure 16 44100 5 21000 45 2 plughw plughw impulse.pcm use_ref"
- $ECHO
- exit 0
-fi 
-
 # Get command line parameters
 BITS="$1"
 RATE="$2"
@@ -67,11 +48,12 @@ OUTDEV="$8"
 IMPFILE="$9"
 AMPLITUDE="${10}"
 REC_CHANNEL="${11}"
-PLAY_CHANNEL="${12}"
+MEASURE_LOOPS="${12}"
+PLAY_CHANNEL="${13}"
 SWEEPFILE="sweep.pcm"
 
 # Generate the log sweep
-$ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $REC_CHANNEL $PLAY_CHANNEL
+$ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $REC_CHANNEL $MEASURE_LOOPS $PLAY_CHANNEL
 
 # Check bits to use
 if [ "$BITS" == "24" ]; then
@@ -109,34 +91,53 @@ $SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -r $RATE -c
 # Filesystem sync
 $ECHO "Waiting 5 seconds for filesystem sync..."
 $SYNC
-$SLEEP 5
 
-# Record the sweep
-$ECHO "Sweep recording."
-$SLEEP 1
-RLEN=$(( $LSLEN + $LSSIL * 2 ))
-$APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
-$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN ${TMP}/msrecsweep${PLAY_CHANNEL}.wav
+REC_SWEEP_BASE=${TMP}/msrecsweep${PLAY_CHANNEL}
+REC_SWEEP_FILE_WAV=$REC_SWEEP_BASE.wav
+REC_SWEEP_FILE_PCM=$REC_SWEEP_BASE.pcm
+MERGE_FILES=""
+
+#loop over MEASURE_LOOPS
+for ((i=1;i<=MEASURE_LOOPS;i++));
+do
+	$SLEEP 5
+	LOOP_REC_PCM_NAME=$REC_SWEEP_BASE$i.pcm
+	LOOP_REC_WAV_NAME=$REC_SWEEP_BASE$i.wav
+	# Record the sweep
+	$ECHO "Sweep recording."
+	$SLEEP 1
+	RLEN=$(( $LSLEN + $LSSIL * 2 ))
+	$APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
+	if [ $TEST_MODE == true ]; then\
+		echo "simulating record!!!\n"
+		LOOP_AMPLITUDE=$(bc <<< "scale=2;$AMPLITUDE +($i/10)")
+		SIM_AMPLITUDE=$LOOP_AMPLITUDE
+		echo "Sim Amplitude: "$SIM_AMPLITUDE" to : "$LOOP_REC_WAV_NAME"\n"
+		$GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $LOOP_REC_PCM_NAME ${TMP}/dummy_inverse.pcm
+		$SOX -t raw -r $RATE -c 1 -e float -b32 $LOOP_REC_PCM_NAME -t wav -r $RATE -c 1 $SOXFMT $LOOP_REC_WAV_NAME $PLAY_SWEEP_PARAM
+	else
+		$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN $LOOP_REC_WAV_NAME
+	fi	
+	MERGE_FILES=$MERGE_FILES" "$LOOP_REC_WAV_NAME
+done
+
+#merge all individual measurements
+if [ $MEASURE_LOOPS == 1 ]; then\
+	REC_SWEEP_FILE_WAV=$LOOP_REC_WAV_NAME
+else
+	sox -m $MERGE_FILES $REC_SWEEP_FILE_WAV
+fi
 
 $ECHO "recorded sweep conversion"
-$SOX ${TMP}/msrecsweep${PLAY_CHANNEL}.wav -t raw -r $RATE -e float -b 32 -c 1 ${TMP}/msrecsweep${PLAY_CHANNEL}.pcm remix 1 0
+$SOX $REC_SWEEP_FILE_WAV -t raw -r $RATE -e float -b 32 -c 1 $REC_SWEEP_FILE_PCM remix 1 0
 
 IMP_FILE_PCM="${TMP}/measured_impulse${PLAY_CHANNEL}.pcm"
 
 # Extract the impulse response
-$LSCONV ${TMP}/msrecsweep${PLAY_CHANNEL}.pcm ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM 
+$LSCONV $REC_SWEEP_FILE_PCM ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM 
 
 
 #convert the result to wav
 $SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav -r $RATE -c 1 $SOXFMT $IMPFILE
 
-$ECHO "Temporary file cleanup..."
-
-# cleanup
-
-#$RM ${TMP}/msinverse.pcm
-#$RM ${TMP}/msrawsweep.pcm
-#$RM ${TMP}/msplaysweep.wav
-#$ECHO "Copying sweepfile to ${SWEEPFILE}..."
-#$MV ${TMP}/msrecsweep.wav "$SWEEPFILE"
 

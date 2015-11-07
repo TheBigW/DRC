@@ -119,7 +119,6 @@ class InputVolumeProcess():
         self.t=None
 
 class MeasureQADlg():
-
     def __init__(self, parent, genSweepFile, measSweepFile, impRespFile, sweep_level):
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(rb.find_plugin_file(parent, "DRCUI.glade"))
@@ -127,8 +126,12 @@ class MeasureQADlg():
         okBtn = self.uibuilder.get_object("button_OKMeasQA")
         okBtn.connect( "clicked", self.on_Ok )
 
+        btnViewAudacity = self.uibuilder.get_object("buttonViewRecSweep")
+        btnViewAudacity.connect( "clicked", self.on_viewRecSweep )
+
         genSweepData = DRCFileTool.LoadAudioFile(genSweepFile, 1)
         self.setEvalData( genSweepData[0], "labelInputSweepData" )
+        self.measSweepFile = measSweepFile
         measSweepData = DRCFileTool.LoadAudioFile(measSweepFile, 1)
         minMaxRec = self.setEvalData( measSweepData[0], "labelRecordedSweepData" )
         impRespData = DRCFileTool.LoadAudioFile(impRespFile, 1)
@@ -139,6 +142,12 @@ class MeasureQADlg():
         if (minMaxRec[1] - minMaxRec[0]) < 0.1 :
             result = "check values : recorded volume seems to be quite low: check proper input device or adjust gain"
         label.set_text(result)
+
+    def on_viewRecSweep(self, param):
+        scriptName="audacity"
+        measSweepWaveFile=os.path.splitext(self.measSweepFile)[0]+".wav"
+        commandLine = [scriptName,measSweepWaveFile]
+        subprocess.Popen(commandLine)
 
     def setEvalData(self, dataArray, labelID):
         minData = min(dataArray)
@@ -251,6 +260,9 @@ class DRCDlg:
 
         self.exec_2ChannelMeasure = self.uibuilder.get_object("checkbutton_2ChannelMeasure")
         self.exec_2ChannelMeasure.set_sensitive(self.parent.hasMultiKernel)
+
+        self.entryMeasureIterations = self.uibuilder.get_object("spinIterations")
+
         self.notebook = self.uibuilder.get_object("notebook1")
         self.volumeUpdateBlocked = False
         self.mode = None
@@ -424,7 +436,8 @@ class DRCDlg:
                                 str(self.entrySweepDuration.get_text()),
                                 impOutputFile,
                                 self.comboInputChanel.get_active_text(),
-                                str(self.exec_2ChannelMeasure.get_active())]
+                                str(self.exec_2ChannelMeasure.get_active()),
+                                str(int(self.entryMeasureIterations.get_value()))]
         p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE, subprocess.PIPE)
         (out, err) = p.communicate()
         print( "output from measure script : " + str(out) + " error : " + str(None) )
