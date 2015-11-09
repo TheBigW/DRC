@@ -123,7 +123,7 @@ done
 
 #merge all individual measurements
 if [ $MEASURE_LOOPS == 1 ]; then\
-	REC_SWEEP_FILE_WAV=$LOOP_REC_WAV_NAME
+	mv $LOOP_REC_WAV_NAME $REC_SWEEP_FILE_WAV
 else
 	sox -m $MERGE_FILES $REC_SWEEP_FILE_WAV
 fi
