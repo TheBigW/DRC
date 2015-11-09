@@ -15,20 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-import os, sys, inspect, struct, time, threading
+import os
+import sys
 
-from gi.repository import GObject, Gst, Peas, RB, Gtk, Gdk, GdkPixbuf
+from gi.repository import GObject, Gst, Peas, RB
+
 from DRCUi import DRCDlg
-
-import DRC_rb3compat
 from DRC_rb3compat import ActionGroup
-from DRC_rb3compat import Action
 from DRC_rb3compat import ApplicationShell
-
 from DRCConfig import DRCConfig
 import DRCFileTool
 
-ui_string="""
+ui_string = """
 <ui>
   <menubar name="MenuBar">
     <menu name="ControlMenu" action="Control">
@@ -40,38 +38,44 @@ ui_string="""
 </ui>
 """
 
+
 class DRCPlugin(GObject.Object, Peas.Activatable):
-    object = GObject.property(type = GObject.Object)
+    object = GObject.property(type=GObject.Object)
+
     def __init__(self):
         super(DRCPlugin, self).__init__()
 
-    def set_kernel(self,filter_array):
-        hasMultiKernel=True
+    def set_kernel(self, filter_array):
+        hasMultiKernel = True
         try:
             self.fir_filter.set_property('multi-channel-kernel', filter_array)
         except Exception as inst:
-            print( 'setting multi chanel filter: attempting to set single kernel',  sys.exc_info()[0], type(inst), inst )
+            print(
+                'setting multi chanel filter: attempting to set single kernel',
+                sys.exc_info()[0], type(inst), inst)
             hasMultiKernel = False
             self.fir_filter.set_property('kernel', filter_array[0])
             pass
-        print( "kernel set")
+        print("kernel set")
         return hasMultiKernel
 
-    def updateFilter(self, filterFileName, numChannels = None):
-        hasMultiKernel=True
+    def updateFilter(self, filterFileName, numChannels=None):
+        hasMultiKernel = True
         try:
             source = self.shell_player.get_playing_source()
             self.shell_player.pause()
-            filter_array = DRCFileTool.LoadAudioFile(filterFileName, numChannels)
-            #pass the filter data to the fir filter
-            num_filter_coeff = len( filter_array )
+            filter_array = DRCFileTool.LoadAudioFile(filterFileName,
+                                                     numChannels)
+
+            # pass the filter data to the fir filter
+            num_filter_coeff = len(filter_array)
             if num_filter_coeff > 0:
                 hasMultiKernel = self.set_kernel(filter_array)
             self.set_filter()
-            if self.entry != None:
+            if self.entry is not None:
                 self.shell_player.play_entry(self.entry, source)
         except Exception as inst:
-            print( 'error updating filter',  sys.exc_info()[0], type(inst), inst )
+            print('error updating filter', sys.exc_info()[0], type(inst), inst)
             pass
         return hasMultiKernel
 
@@ -84,27 +88,30 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             self.shell = self.object
             self.shell_player = self.shell.props.shell_player
             self.player = self.shell_player.props.player
-            self.fir_filter = Gst.ElementFactory.make('audiofirfilter', 'MyFIRFilter')
-            #open filter files
+            self.fir_filter = Gst.ElementFactory.make('audiofirfilter',
+                                                      'MyFIRFilter')
+            # open filter files
             aCfg = DRCConfig()
-            self.hasMultiKernel=self.updateFilter(aCfg.filterFile, aCfg.numFilterChanels)
-            #print( str(dir( self.shell.props)) )
+            self.hasMultiKernel = self.updateFilter(aCfg.filterFile,
+                                                    aCfg.numFilterChanels)
+            # print( str(dir( self.shell.props)) )
         except Exception as inst:
-            print( 'filter not set',  sys.exc_info()[0], type(inst), inst )
+            print('filter not set', sys.exc_info()[0], type(inst), inst)
             pass
-        self.psc_id = self.shell_player.connect('playing-song-changed', self.playing_song_changed)
-        #no possible workaround as somehow never reaches end of song :(
+        self.psc_id = self.shell_player.connect('playing-song-changed',
+                                                self.playing_song_changed)
+        # no possible workaround as somehow never reaches end of song :(
         self.shell_player.connect('elapsed-changed', self.elapsed_changed)
-        #finally add UI
-        self.add_ui( self, self.shell )
+        # finally add UI
+        self.add_ui(self, self.shell)
 
     def add_ui(self, plugin, shell):
         self.drcDlg = DRCDlg(self)
         print("starting add_ui")
         action_group = ActionGroup(shell, 'DRCActionGroup')
         action_group.add_action(func=self.drcDlg.show_ui,
-            action_name='DRC', label=_('_DRC'),
-            action_type='app')
+                                action_name='DRC', label=_('_DRC'),
+                                action_type='app')
         self._appshell = ApplicationShell(shell)
         self._appshell.insert_action_group(action_group)
         self._appshell.add_app_menuitems(ui_string, 'DRCActionGroup')
@@ -113,25 +120,25 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
     def set_filter(self):
         try:
             if not self.filterSet:
-                print( 'adding filter' )
+                print('adding filter')
                 self.player.add_filter(self.fir_filter)
-                print('done setting filter' )
+                print('done setting filter')
             self.filterSet = True
         except Exception as inst:
-            print( 'unexpected exception',  sys.exc_info()[0], type(inst), inst )
+            print('unexpected exception', sys.exc_info()[0], type(inst), inst)
             pass
 
     def remove_Filter(self):
         try:
             if self.filterSet:
                 self.player.remove_filter(self.fir_filter)
-                print( 'filter disabled' )
+                print('filter disabled')
             self.filterSet = False
         except:
             pass
 
     def do_deactivate(self):
-        print( 'entering do_deactivate' )
+        print('entering do_deactivate')
         self.shell_player.disconnect(self.psc_id)
 
         try:
@@ -145,13 +152,15 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
         del self.fir_filter
 
     def elapsed_changed(self, sp, elapsed):
-        #workaround due to FIR filter issues during playing back multiple songs
-        #switching as well as new song select in UI seems to fix that
-        #print("elapsed : " + str(elapsed) )
+        # workaround due to FIR filter issues during playing back multiple
+        # songs
+        # switching as well as new song select in UI seems to fix that
+        # print("elapsed : " + str(elapsed) )
         diff = self.duration - elapsed
-        #print("diff : " + str(diff))
-        #allowing self triggered skip forth and back after last 15 seconds
-        #to bad that diff is unreliable.. no idea why 0 never marks the real end
+        # print("diff : " + str(diff))
+        # allowing self triggered skip forth and back after last 15 seconds
+        # to bad that diff is unreliable.. no idea why 0 never marks the
+        # real end
         if self.duration < 1:
             return
         if diff <= 15 and diff > -1:
@@ -164,13 +173,15 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
     def playing_song_changed(self, sp, entry):
         self.duration = sp.get_playing_song_duration()
         self.entry = entry
-        #print("playing song duration: " + str(self.duration))
-        if entry == None or not self.selfAllowTriggered:
+        # print("playing song duration: " + str(self.duration))
+        if entry is None or not self.selfAllowTriggered:
             return
-        #workaround due to FIR filter issues during playing back multiple songs
-        #switching as well as new song select in UI seems to fix that
+        # workaround due to FIR filter issues during playing back multiple
+        # songs
+        # switching as well as new song select in UI seems to fix that
         '''TODO: this will fail for manually selecting last song in list in UI
-            clean way would be to check has-prev/has-next but seems to be useless:
+            clean way would be to check has-prev/has-next but seems to be
+            useless:
             returns true even if no son is previous in current UI list...
         '''
         source = sp.get_playing_source()
