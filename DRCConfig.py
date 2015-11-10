@@ -15,11 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-from XMLSerializer import Serializer
-from gi.repository import RB
 import os
 
-DRC_CFG_FILE="DRC.xml"
+from gi.repository import RB
+
+from XMLSerializer import Serializer
+
+DRC_CFG_FILE = "DRC.xml"
+
 
 class DRCConfig:
     def __init__(self):
@@ -34,10 +37,11 @@ class DRCConfig:
         self.sweepDuration = 40
         self.numFilterChanels = 1
         self.load()
+
     def load(self):
         try:
-            cfgFile = open(self.cfgFileName,'r')
-            cfg = Serializer.read(cfgFile , self)
+            cfgFile = open(self.cfgFileName, 'r')
+            cfg = Serializer.read(cfgFile, self)
             self.filterFile = cfg.filterFile
             self.startFrequency = cfg.startFrequency
             self.endFrequency = cfg.endFrequency
@@ -47,6 +51,7 @@ class DRCConfig:
             print("no cfg existing -> create default")
             self.save()
             pass
-    def save( self ):
+
+    def save(self):
         print("saving cfg to : " + self.cfgFileName)
         Serializer.write(self.cfgFileName, self)
