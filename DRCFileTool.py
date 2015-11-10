@@ -118,7 +118,7 @@ def PrintWavHeader(strWAVFile):
 def debugDumpAppliedFilter(filter_array):
     # s = struct.pack('f'*len(filter_array), *filter_array)
     f = open(
-        '/home/tobias/.local/share/rhythmbox/plugins/DRC/appliedFilter.raw',
+        '/tmp/appliedFilter.raw',
         'wb')
     # f.write(s)
     float_array = array('f', filter_array)
@@ -126,7 +126,7 @@ def debugDumpAppliedFilter(filter_array):
     f.close()
     # dump textual representation too
     theFile = open(
-        '/home/tobias/.local/share/rhythmbox/plugins/DRC/appliedFilter.txt',
+        '/tmp/appliedFilter.txt',
         'w')
     for item in filter_array:
         theFile.write("%s\n" % item)
