@@ -30,10 +30,15 @@ else
  echo "IMPULSE_FILE : " $IMPULSE_FILE
 fi
 
+echo "removing leading silence
+REM_SILENCE_IMP_FILE=/tmp/rem_silence_imp.wav
+sox $IMPULSE_FILE $REM_SILENCE_IMP_FILE silence 1 0.0005 0.002%
+
+
 #loop over NUM_CHANNELS and create a filter for each channel
 for ((i=1;i<=NUM_CHANNELS;i++));
 do
-    PCM_IMP_FILENAME=${TMP}/impulse_chanel$i.pcm
+    PCM_IMP_FILENAME=${TMP}/impulse_chanel$i.pcm    
     if [ $i == 1 ]; then
         #default for left channel
         REMIX_PARAM="remix 1 0"
@@ -41,13 +46,14 @@ do
             REMIX_PARAM=""
         fi
         #left channel
-        $SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
+        $SOX $REM_SILENCE_IMP_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
     elif [ $i == 2 ]; then
         #right channel
-        $SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME remix 0 1
+        $SOX $REM_SILENCE_IMP_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME remix 0 1
     else
         echo "mhhh multi chanel not properly supported for more than 2 channels yet feel free to add :)"    
     fi
+    
     echo DRCCfgFile : $DRC_CFG_FILE
     echo "calculating filters"
     PCM_FILTER=${TMP}/filter$i.pcm
