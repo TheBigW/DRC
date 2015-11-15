@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Get command line parameters
-DRC_CFG_FILE="$1"
+DRC_CFG_FILE="${1}"
 IMPULSE_FILE="$2"
 FILTER_FILE="$3"
 NUM_CHANNELS="$4"
@@ -16,8 +16,10 @@ echo "extension : " $extension
 if [ "$extension" == "wav" ]; then
  #get number of chanels from the wavefile
  #TODO : test on german installation  whether those matches are language independent 
+ echo "reading wave properties"
  read NUM_CHANNELS <<< $(soxi "${IMPULSE_FILE}" | awk '/Channels/ { print $3 }')
  read RATE <<< $(soxi "${IMPULSE_FILE}" | awk '/Sample Rate/ { print $4 }')
+ echo "done reading wave properties: " $NUM_CHANNELS", " $RATE
 else
  #convert to wave to have a common format to start from
  echo "detected raw file input : doing sox conversion"
@@ -30,7 +32,7 @@ else
  echo "IMPULSE_FILE : " $IMPULSE_FILE
 fi
 
-echo "removing leading silence
+echo "removing leading silence"
 REM_SILENCE_IMP_FILE=/tmp/rem_silence_imp.wav
 sox $IMPULSE_FILE $REM_SILENCE_IMP_FILE silence 1 0.0005 0.002%
 

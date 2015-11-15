@@ -64,7 +64,6 @@ class ChanelSelDlg():
     def getNumChannels(self):
         return self.numChannels
 
-
 class DRCCfgDlg():
     def __init__(self, parent):
         self.uibuilder = Gtk.Builder()
@@ -81,6 +80,12 @@ class DRCCfgDlg():
             "/usr/share/drc/mic")
         self.comboboxtext_norm_method = self.uibuilder.get_object(
             "comboboxtext_norm_method")
+        self.filechooserbuttonBaseCfg = self.uibuilder.get_object(
+            "filechooserbuttonBaseCfg")
+        self.filechooserbuttonBaseCfg.set_current_folder(
+            "/usr/share/drc/config/44.1 kHz")
+        self.filechooserbuttonBaseCfg.set_filename(
+            "/usr/share/drc/config/44.1 kHz/erb-44.1.drc")
 
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
@@ -95,6 +100,9 @@ class DRCCfgDlg():
 
     def getNormMethod(self):
         return self.comboboxtext_norm_method.get_active_text()
+
+    def getBaseCfg(self):
+        return self.filechooserbuttonBaseCfg.get_filename()
 
     def run(self):
         print("running dlg...")
@@ -407,7 +415,7 @@ class DRCDlg:
         if drcMethod == "DRC":
             self.cfgDRCButton.show()
             self.filechooserbuttonTargetCurve.set_filename(
-                "/usr/share/drc/target/44.1 kHz/pa-44.1.txt")
+                "/usr/share/drc/target/44.1 kHz/bk-44.1.txt")
         else:
             self.cfgDRCButton.hide()
             drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
@@ -554,8 +562,9 @@ class DRCDlg:
 
     def prepareDRC(self, impRespFile, filterResultFile):
         drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
-        drcCfgFileName = "erb44100.drc"
-        drcCfgSrcFile = rb.find_plugin_file(self.parent, drcCfgFileName)
+        drcCfgFileName = os.path.basename(self.drcCfgDlg.getBaseCfg())
+        print("drcCfgBaseName : " + drcCfgFileName)
+        drcCfgSrcFile = self.drcCfgDlg.getBaseCfg()
         drcCfgDestFile = self.getTmpCfgDir() + "/" + drcCfgFileName
         drcScript.append(drcCfgDestFile)
         print("drcCfgDestFile : " + drcCfgDestFile)
@@ -577,6 +586,7 @@ class DRCDlg:
         destData = self.changeCfgParamDRC(srcData, changeCfgFileArray)
         destDrcCfgFile = open(drcCfgDestFile, "w")
         destDrcCfgFile.write(destData)
+        destDrcCfgFile.close()
         return drcScript
 
     def showMsgBox(self, msg):
