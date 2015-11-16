@@ -64,7 +64,40 @@ class ChanelSelDlg():
     def getNumChannels(self):
         return self.numChannels
 
+
+class PORCCfgDlg():
+
+    def __init__(self, parent):
+        self.uibuilder = Gtk.Builder()
+        self.uibuilder.add_from_file(
+            rb.find_plugin_file(parent, "DRCUI.glade"))
+        self.dlg = self.uibuilder.get_object("porcCfgDlg")
+        okBtn = self.uibuilder.get_object("button_OKPORCDlg")
+        okBtn.connect("clicked", self.on_Ok)
+        cancelBtn = self.uibuilder.get_object("button_CancelPORCDlg")
+        cancelBtn.connect("clicked", self.on_Cancel)
+
+        self.checkbuttonMixedPhase = self.uibuilder.get_object(
+            "checkbuttonMixedPhase")
+
+    def on_Ok(self, param):
+        self.dlg.response(Gtk.ResponseType.OK)
+        self.dlg.set_visible(False)
+
+    def on_Cancel(self, param):
+        self.dlg.response(Gtk.ResponseType.CANCEL)
+        self.dlg.set_visible(False)
+
+    def getMixedPhaseEnabled(self):
+        return self.checkbuttonMixedPhase.get_active()
+
+    def run(self):
+        print("running dlg...")
+        return self.dlg.run()
+
+
 class DRCCfgDlg():
+
     def __init__(self, parent):
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(
@@ -310,10 +343,11 @@ class DRCDlg:
         self.comboDRC.connect("changed", self.on_DRCTypeChanged)
         self.on_DRCTypeChanged(self.comboDRC)
         self.drcCfgDlg = DRCCfgDlg(self.parent)
+        self.porcCfgDlg = PORCCfgDlg(self.parent)
         self.channelSelDlg = ChanelSelDlg(self.parent)
 
         self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked",
-                                                                   self.on_editTargetCurve)
+                                                self.on_editTargetCurve)
 
         self.exec_2ChannelMeasure = self.uibuilder.get_object(
             "checkbutton_2ChannelMeasure")
@@ -408,16 +442,20 @@ class DRCDlg:
         self.updateRecDeviceInfo()
 
     def on_cfgDRC(self, button):
-        self.drcCfgDlg.run()
+        drcMethod = self.comboDRC.get_active_text()
+        if drcMethod == "DRC":
+            self.drcCfgDlg.run()
+        else:
+            self.porcCfgDlg.run()
 
     def on_DRCTypeChanged(self, combo):
         drcMethod = combo.get_active_text()
         if drcMethod == "DRC":
-            self.cfgDRCButton.show()
+            self.cfgDRCButton.set_label("configure DRC")
             self.filechooserbuttonTargetCurve.set_filename(
                 "/usr/share/drc/target/44.1 kHz/bk-44.1.txt")
         else:
-            self.cfgDRCButton.hide()
+            self.cfgDRCButton.set_label("configure PORC")
             drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
             pluginPath = os.path.dirname(os.path.abspath(drcScript[0]))
             porcTargetCurve = pluginPath + "/porc/data/tact30f.txt"
@@ -628,6 +666,8 @@ class DRCDlg:
                     "install in the DRC plugin subfolder 'porc'")
                 return
             drcScript.append(porcCommand)
+            if self.porcCfgDlg.getMixedPhaseEnabled():
+                drcScript.append("--mixed")
             drcScript.append(self.filechooserbuttonTargetCurve.get_filename())
         # execute measure script to generate filters
         # last 2 parameters for all scripts allways impulse response and

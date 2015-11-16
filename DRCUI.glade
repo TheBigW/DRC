@@ -912,10 +912,10 @@ Please select:</property>
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="labelBaseCfg">
+          <object class="GtkFileChooserButton" id="filechooserbuttonBaseCfg">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">DRC BaseCfg</property>
+            <property name="create_folders">False</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -924,10 +924,10 @@ Please select:</property>
           </packing>
         </child>
         <child>
-          <object class="GtkFileChooserButton" id="filechooserbuttonBaseCfg">
+          <object class="GtkLabel" id="labelBaseCfg">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="create_folders">False</property>
+            <property name="label" translatable="yes">DRC BaseCfg</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -1099,6 +1099,85 @@ Please select:</property>
             <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">7</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkDialog" id="porcCfgDlg">
+    <property name="can_focus">False</property>
+    <property name="modal">True</property>
+    <property name="type_hint">dialog</property>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="dialog-vbox9">
+        <property name="can_focus">False</property>
+        <property name="can_default">True</property>
+        <property name="receives_default">True</property>
+        <property name="resize_mode">queue</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox" id="dialog-action_area9">
+            <property name="can_focus">False</property>
+            <property name="margin_top">1</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="button_OKPORCDlg">
+                <property name="label">gtk-ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="has_default">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="button_CancelPORCDlg">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="can_default">True</property>
+                <property name="has_default">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+                <property name="xalign">0.52999997138977051</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkCheckButton" id="checkbuttonMixedPhase">
+            <property name="label" translatable="yes">mixed phase compensation</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">False</property>
+            <property name="tooltip_text" translatable="yes">hint: takes much longer for calculation</property>
+            <property name="xalign">0</property>
+            <property name="yalign">0.50999999046325684</property>
+            <property name="active">True</property>
+            <property name="draw_indicator">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
           </packing>
         </child>
       </object>
