@@ -18,7 +18,7 @@ APLAY="aplay"
 ARECORD="arecord"
 SYNC="sync"
 SLEEP="sleep"
-TEST_MODE=false
+TEST_MODE=true
 
 # Default parameters
 TMP="/tmp"
@@ -107,15 +107,18 @@ do
 	$ECHO "Sweep recording."
 	$SLEEP 1
 	RLEN=$(( $LSLEN + $LSSIL * 2 ))
-	$APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
+	
 	if [ $TEST_MODE == true ]; then\
 		echo "simulating record!!!\n"
+		$APLAY -D $OUTDEV ${TMP}/msplaysweep.wav
 		LOOP_AMPLITUDE=$(bc <<< "scale=2;$AMPLITUDE +($i/10)")
 		SIM_AMPLITUDE=$LOOP_AMPLITUDE
 		echo "Sim Amplitude: "$SIM_AMPLITUDE" to : "$LOOP_REC_WAV_NAME"\n"
+		#LEADIN=$(bc <<< "scale=1;$LEADIN+($i*10)")
 		$GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $LOOP_REC_PCM_NAME ${TMP}/dummy_inverse.pcm
 		$SOX -t raw -r $RATE -c 1 -e float -b32 $LOOP_REC_PCM_NAME -t wav -r $RATE -c 1 $SOXFMT $LOOP_REC_WAV_NAME $PLAY_SWEEP_PARAM
 	else
+		$APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
 		$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN $LOOP_REC_WAV_NAME
 	fi	
 	MERGE_FILES=$MERGE_FILES" "$LOOP_REC_WAV_NAME

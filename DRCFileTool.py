@@ -151,8 +151,12 @@ def LoadRawFile(filename, numChanels, sampleByteSize=4, offset=0):
                 floatSample = 0
             filter_array[chanel].append(floatSample)
     # dump the filter to check
-    print(("loaded r/l: " + str(len(filter_array[0])) + "/" +
-        str(len(filter_array[1])) + " samples per channel successfully"))
+    if numChanels > 1:
+        print(("loaded r/l: " + str(len(filter_array[0])) + "/" +
+            str(len(filter_array[1])) + " samples per channel successfully"))
+    else:
+        print(("loaded one chanel filter: " + str(len(filter_array[0])) +
+            " with samples successfully"))
     #debugDumpAppliedFilter(filter_array[0])
     return filter_array
 

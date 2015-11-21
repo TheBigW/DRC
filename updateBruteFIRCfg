@@ -11,8 +11,8 @@ if [[ $# < 2 ]]; then
 	# make ALSA_PLAY_HARDWARE teh default again
 else
 	echo "runnign sox to create bruteFIR pcm filters"
-	sox $WAV_FILTER_FILE -t raw -r $RATE -e float -b 32 -c 1 ~/filter_l.pcm remix 1 0
-	sox $WAV_FILTER_FILE -t raw -r $RATE -e float -b 32 -c 1 ~/filter_r.pcm remix 0 1
+	sox $WAV_FILTER_FILE -t raw -r $RATE -e float -b 32 -c 1 ~/filter_l.pcm remix 1
+	sox $WAV_FILTER_FILE -t raw -r $RATE -e float -b 32 -c 1 ~/filter_r.pcm remix 2
 
 	# TODO: create and update bruteFIR cfg if not existing, start brutefir as sudo, install if not existing, enable alsa loopback device etc....
 fi

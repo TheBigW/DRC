@@ -41,21 +41,8 @@ sox $IMPULSE_FILE $REM_SILENCE_IMP_FILE silence 1 0.0005 0.002%
 for ((i=1;i<=NUM_CHANNELS;i++));
 do
     PCM_IMP_FILENAME=${TMP}/impulse_chanel$i.pcm    
-    if [ $i == 1 ]; then
-        #default for left channel
-        REMIX_PARAM="remix 1 0"
-        if [ $NUM_CHANNELS == 1 ]; then
-            REMIX_PARAM=""
-        fi
-        #left channel
-        $SOX $REM_SILENCE_IMP_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
-    elif [ $i == 2 ]; then
-        #right channel
-        $SOX $REM_SILENCE_IMP_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME remix 0 1
-    else
-        echo "mhhh multi chanel not properly supported for more than 2 channels yet feel free to add :)"    
-    fi
-    
+    REMIX_PARAM="remix "$i
+    $SOX $REM_SILENCE_IMP_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
     echo DRCCfgFile : $DRC_CFG_FILE
     echo "calculating filters"
     PCM_FILTER=${TMP}/filter$i.pcm
