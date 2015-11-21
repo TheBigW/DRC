@@ -18,7 +18,7 @@ APLAY="aplay"
 ARECORD="arecord"
 SYNC="sync"
 SLEEP="sleep"
-TEST_MODE=true
+TEST_MODE=false
 
 # Default parameters
 TMP="/tmp"
