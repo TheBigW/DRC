@@ -50,34 +50,47 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
         try:
             self.fir_filter.set_property('multi-channel-kernel', filter_array)
         except Exception as inst:
-            print(
+            print((
                 'setting multi chanel filter: attempting to set single kernel',
-                sys.exc_info()[0], type(inst), inst)
+                sys.exc_info()[0], type(inst), inst))
             hasMultiKernel = False
             self.fir_filter.set_property('kernel', filter_array[0])
             pass
         print("kernel set")
         return hasMultiKernel
 
-    def updateFilter(self, filterFileName, numChannels=None):
-        hasMultiKernel = True
-        try:
-            source = self.shell_player.get_playing_source()
-            self.shell_player.pause()
-            filter_array = DRCFileTool.LoadAudioFile(filterFileName,
-                                                     numChannels)
-
-            # pass the filter data to the fir filter
-            num_filter_coeff = len(filter_array)
-            if num_filter_coeff > 0:
-                hasMultiKernel = self.set_kernel(filter_array)
+    def updateFilter(self, filterFileName=None):
+        aCfg = DRCConfig()
+        if filterFileName is None:
+            filterFileName = aCfg.filterFile
+        if aCfg.FIRFilterMode == 1:
+            #gstFIR
             self.set_filter()
-            if self.entry is not None:
-                self.shell_player.play_entry(self.entry, source)
-        except Exception as inst:
-            print('error updating filter', sys.exc_info()[0], type(inst), inst)
-            pass
-        return hasMultiKernel
+            hasMultiKernel = False
+            try:
+                source = self.shell_player.get_playing_source()
+                self.shell_player.pause()
+                filter_array = DRCFileTool.LoadAudioFile(filterFileName,
+                                                         aCfg.numFilterChanels)
+                # pass the filter data to the fir filter
+                num_filter_coeff = len(filter_array)
+                if num_filter_coeff > 0:
+                    hasMultiKernel = self.set_kernel(filter_array)
+                self.set_filter()
+                if self.entry is not None:
+                    self.shell_player.play_entry(self.entry, source)
+            except Exception as inst:
+                print(('error updating filter', sys.exc_info()[0], type(inst),
+                    inst))
+                pass
+            return hasMultiKernel
+        elif aCfg.FIRFilterMode == 1:
+            #bruteFIF
+            self.remove_Filter()
+        else:
+            #None : disable all filtering
+            self.remove_Filter()
+        return True
 
     def do_activate(self):
         try:
@@ -91,9 +104,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             self.fir_filter = Gst.ElementFactory.make('audiofirfilter',
                                                       'MyFIRFilter')
             # open filter files
-            aCfg = DRCConfig()
-            self.hasMultiKernel = self.updateFilter(aCfg.filterFile,
-                                                    aCfg.numFilterChanels)
+            self.hasMultiKernel = self.updateFilter()
             # print( str(dir( self.shell.props)) )
         except Exception as inst:
             print('filter not set', sys.exc_info()[0], type(inst), inst)
@@ -110,7 +121,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
         print("starting add_ui")
         action_group = ActionGroup(shell, 'DRCActionGroup')
         action_group.add_action(func=self.drcDlg.show_ui,
-                                action_name='DRC', label=_('_DRC'),
+                                action_name='DRC', label=('_DRC'),
                                 action_type='app')
         self._appshell = ApplicationShell(shell)
         self._appshell.insert_action_group(action_group)

@@ -361,6 +361,20 @@ class DRCDlg:
         self.mode = None
         self.inputVolumeUpdate = InputVolumeProcess(
             self.progressbarInputVolume)
+        self.applyFilterBruteFIR = self.uibuilder.get_object(
+            "applyFilterBruteFIR")
+        self.applyFilterBruteFIR.connect("clicked", self.on_applyFilterBruteFIR)
+        self.comboboxFIRFilterMode = self.uibuilder.get_object(
+            "comboboxFIRFilterMode")
+        self.comboboxFIRFilterMode.set_active(aCfg.FIRFilterMode)
+        self.checkbuttonEnableFiltering = self.uibuilder.get_object(
+            "checkbuttonEnableFiltering")
+        self.checkbuttonEnableFiltering.set_active(aCfg.FIRFilterMode > 0)
+        self.checkbuttonEnableFiltering.connect("clicked",
+            self.on_checkbuttonEnableFiltering)
+        self.applyFilterGST = self.uibuilder.get_object(
+            "applyFilterGST")
+        self.applyFilterGST.connect("clicked", self.on_applyFilterGST)
 
     def __init__(self, parent):
         self.parent = parent
@@ -394,9 +408,9 @@ class DRCDlg:
         pattern = re.compile("(\D\d+_\w*)", re.MULTILINE)
         supportedModes = pattern.findall(str(err))
 
-        print("numChannels : " + str(numChanels))
-        print("supportedModes : " + str(supportedModes))
-        print("No. supported Modes : " + str(len(supportedModes)))
+        print(("numChannels : " + str(numChanels)))
+        print(("supportedModes : " + str(supportedModes)))
+        print(("No. supported Modes : " + str(len(supportedModes))))
         return [numChanels, supportedModes]
 
     def startInputVolumeUpdate(self, channel=None):
@@ -472,36 +486,70 @@ class DRCDlg:
     def slider_changed(self, hscale):
         self.sweep_level = hscale.get_value()
 
-    def set_filter(self, DrcFilename):
-        fileExt = os.path.splitext(DrcFilename)[-1]
-        numChanels = None
-        print("ext = " + fileExt)
-        if fileExt != ".wav":
-            if self.channelSelDlg.run() == Gtk.ResponseType.OK:
-                numChanels = self.channelSelDlg.getNumChannels()
-        self.parent.updateFilter(DrcFilename, numChanels)
-        return numChanels
+    def set_filter(self):
+        DrcFilename = self.filechooserbtn.get_filename()
+        self.parent.updateFilter(DrcFilename)
 
     def on_file_selected(self, widget):
         filterFile = widget.get_filename()
         if os.path.isfile(filterFile):
-            numChanels = self.set_filter(filterFile)
-            self.saveSettings(numChanels)
+            self.saveSettings()
 
-    def saveSettings(self, numChanels=None):
+    def saveSettings(self):
         aCfg = DRCConfig()
         aCfg.filterFile = self.filechooserbtn.get_filename()
         aCfg.recordGain = self.sweep_level
         aCfg.startFrequency = int(self.entryStartFrequency.get_text())
         aCfg.endFrequency = int(self.entryEndFrequency.get_text())
         aCfg.sweepDuration = int(self.entrySweepDuration.get_text())
-        if numChanels is not None:
-            aCfg.numFilterChanels = numChanels
+        aCfg.FIRFilterMode = self.comboboxFIRFilterMode.get_active()
+        fileExt = os.path.splitext(aCfg.filterFile)[-1]
+        print(("ext = " + fileExt))
+        if fileExt != ".wav":
+            if self.channelSelDlg.run() == Gtk.ResponseType.OK:
+                aCfg.numFilterChanels = self.channelSelDlg.getNumChannels()
         aCfg.save()
 
     def on_apply_settings(self, some_param):
         self.saveSettings()
         self.dlg.set_visible(False)
+
+    def updateBruteFIRCfg(self, enable):
+        updateBruteFIRScript = [rb.find_plugin_file(self.parent,
+                "updateBruteFIRCfg")]
+        if enable is True:
+            self.comboboxFIRFilterMode.set_active(2)
+            updateBruteFIRScript.append(self.getAlsaPlayHardwareString())
+            updateBruteFIRScript.append(self.filechooserbtn.get_filename())
+        print('create bruteFIRConfig and start/install bruteFIR')
+        p = subprocess.Popen(updateBruteFIRScript, 0, None, None,
+            subprocess.PIPE, subprocess.PIPE)
+        (out, err) = p.communicate()
+        print(("output from bruteFIR update script : " + str(out)))
+
+    def on_applyFilterBruteFIR(self, some_param):
+        self.updateBruteFIRCfg(True)
+        self.saveSettings()
+        self.set_filter()
+        self.checkbuttonEnableFiltering.set_active(True)
+
+    def on_applyFilterGST(self, some_param):
+        self.comboboxFIRFilterMode.set_active(1)
+        self.saveSettings()
+        self.set_filter()
+        self.updateBruteFIRCfg(False)
+        self.checkbuttonEnableFiltering.set_active(True)
+
+    def on_checkbuttonEnableFiltering(self, some_param):
+        enableFiltering = some_param.get_active()
+        aCfg = DRCConfig()
+        if enableFiltering is True:
+            self.comboboxFIRFilterMode.set_active(aCfg.FIRFilterMode)
+        else:
+            self.comboboxFIRFilterMode.set_active(0)
+        self.saveSettings()
+        self.set_filter()
+        self.updateBruteFIRCfg(False)
 
     def getAlsaPlayHardwareString(self):
         if len(self.alsaPlayHardwareList) < 1:
@@ -613,7 +661,7 @@ class DRCDlg:
         normMethod = self.drcCfgDlg.getNormMethod()
         changeCfgFileArray = [["BCInFile", impRespFile],
                               ["PSPointsFile",
-                               self.filechooserbuttonTargetCurve.get_filename()],
+                            self.filechooserbuttonTargetCurve.get_filename()],
                               ["PSNormType", normMethod]
                               ]
         if micCalFile is not None:
@@ -680,7 +728,7 @@ class DRCDlg:
         (out, err) = p.communicate()
         print("output from filter calculate script : " + str(out))
         self.filechooserbtn.set_filename(filterResultFile)
-        self.set_filter(filterResultFile)
+        self.set_filter()
         self.notebook.next_page()
 
     def on_close(self, shell):

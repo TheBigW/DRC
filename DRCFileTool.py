@@ -116,12 +116,12 @@ def PrintWavHeader(strWAVFile):
 
 
 def debugDumpAppliedFilter(filter_array):
-    # s = struct.pack('f'*len(filter_array), *filter_array)
     f = open(
         '/tmp/appliedFilter.raw',
         'wb')
-    # f.write(s)
+    print("convert to array")
     float_array = array('f', filter_array)
+    print("writing to file...")
     float_array.tofile(f)
     f.close()
     # dump textual representation too
@@ -151,7 +151,9 @@ def LoadRawFile(filename, numChanels, sampleByteSize=4, offset=0):
                 floatSample = 0
             filter_array[chanel].append(floatSample)
     # dump the filter to check
-    # debugDumpAppliedFilter(filter_array)
+    print(("loaded r/l: " + str(len(filter_array[0])) + "/" +
+        str(len(filter_array[1])) + " samples per channel successfully"))
+    #debugDumpAppliedFilter(filter_array[0])
     return filter_array
 
 

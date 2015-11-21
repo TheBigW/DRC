@@ -12,6 +12,7 @@ install:
 	install -d $(DESTDIR)$(DATADIR)
 	install -m 644 *.py $(DESTDIR)$(SUBDIR)
 	install -m 755 calcFilter* $(DESTDIR)$(DATADIR)
+	install -m 755 updateBruteFIRCfg $(DESTDIR)$(DATADIR)
 	install -m 755 measure* $(DESTDIR)$(DATADIR)
 	install -m 755 installPORC.sh $(DESTDIR)$(DATADIR)
 	install -m 644 *.glade $(DESTDIR)$(DATADIR)

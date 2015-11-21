@@ -36,6 +36,13 @@ class DRCConfig:
         self.endFrequency = 21000
         self.sweepDuration = 40
         self.numFilterChanels = 1
+        self.FIRFilterMode = 0
+        self.playHardwareIndex = 0
+        self.recHardwareIndex = 0
+        self.recHardwareChannelIndex = 0
+        #0 - None
+        #1 - GStreamerFIR
+        #2 - BruteFIR
         self.load()
 
     def load(self):
@@ -47,6 +54,10 @@ class DRCConfig:
             self.endFrequency = cfg.endFrequency
             self.sweepDuration = cfg.sweepDuration
             self.numFilterChanels = cfg.numFilterChanels
+            self.FIRFilterMode = cfg.FIRFilterMode
+            self.playHardwareIndex = cfg.playHardwareIndex
+            self.recHardwareIndex = cfg.recHardwareIndex
+            self.recHardwareChannelIndex = cfg.recHardwareChannelIndex
         except:
             print("no cfg existing -> create default")
             self.save()
