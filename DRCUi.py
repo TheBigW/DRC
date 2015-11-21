@@ -249,11 +249,11 @@ def getDeviceListFromAlsaOutput(command):
     return alsaHardwareList
 
 
-def fillComboFromDeviceList(combo, alsaHardwareList):
+def fillComboFromDeviceList(combo, alsaHardwareList,active):
     for i in range(0, len(alsaHardwareList)):
         combo.append_text(
             alsaHardwareList[i][1] + ": " + alsaHardwareList[i][3])
-    combo.set_active(0)
+    combo.set_active(active)
 
 
 class DRCDlg:
@@ -299,11 +299,14 @@ class DRCDlg:
         self.alsaPlayHardwareList = getDeviceListFromAlsaOutput("aplay")
         self.alsaRecHardwareList = getDeviceListFromAlsaOutput("arecord")
         fillComboFromDeviceList(self.alsaPlayHardwareCombo,
-                                self.alsaPlayHardwareList)
+                                self.alsaPlayHardwareList,
+                                aCfg.playHardwareIndex)
         fillComboFromDeviceList(self.alsaRecHardwareCombo,
-                                self.alsaRecHardwareList)
+                                self.alsaRecHardwareList,
+                                aCfg.recHardwareIndex)
         self.alsaRecHardwareCombo.connect("changed", self.on_recDeviceChanged)
         self.comboInputChanel = self.uibuilder.get_object("comboInputChanel")
+        self.comboInputChanel.set_active(aCfg.recHardwareChannelIndex)
         # fill the number of input channels
         self.updateRecDeviceInfo()
         self.comboInputChanel.connect("changed", self.on_InputChanelChanged)
@@ -361,20 +364,11 @@ class DRCDlg:
         self.mode = None
         self.inputVolumeUpdate = InputVolumeProcess(
             self.progressbarInputVolume)
-        self.applyFilterBruteFIR = self.uibuilder.get_object(
-            "applyFilterBruteFIR")
-        self.applyFilterBruteFIR.connect("clicked", self.on_applyFilterBruteFIR)
         self.comboboxFIRFilterMode = self.uibuilder.get_object(
             "comboboxFIRFilterMode")
         self.comboboxFIRFilterMode.set_active(aCfg.FIRFilterMode)
-        self.checkbuttonEnableFiltering = self.uibuilder.get_object(
-            "checkbuttonEnableFiltering")
-        self.checkbuttonEnableFiltering.set_active(aCfg.FIRFilterMode > 0)
-        self.checkbuttonEnableFiltering.connect("clicked",
-            self.on_checkbuttonEnableFiltering)
-        self.applyFilterGST = self.uibuilder.get_object(
-            "applyFilterGST")
-        self.applyFilterGST.connect("clicked", self.on_applyFilterGST)
+        self.comboboxFIRFilterMode.connect("changed",
+            self.on_FIRFilterModeChanged)
 
     def __init__(self, parent):
         self.parent = parent
@@ -387,31 +381,38 @@ class DRCDlg:
                 editDlg.getTargetCurveFile())
 
     def getRecordingDeviceInfo(self):
-        params = ['arecord', '-D', self.getAlsaRecordHardwareString(),
-                  '--dump-hw-params', '-d 1']
-        print("executing: " + str(params))
-        p = subprocess.Popen(params, 0, None, None, subprocess.PIPE,
-                             subprocess.PIPE)
-        (out, err) = p.communicate()
-        print("hw infos : err : " + str(err) + " out : " + str(out))
-        # I rely on channels as it seems to be not translated
-        pattern = re.compile("CHANNELS:\s\[?(\d{1,2})\s?(\d{1,2})?\]?",
-                             re.MULTILINE)
-        numChanels = pattern.findall(str(err))
-        # workaround to remove empty match in case of just single number
-        # because I was not clever enough to have a clean conditional regex...
-        if len(numChanels[0]) > 1 and not numChanels[0][1]:
-            print("only channel number present -> truncate")
-            numChanels = [numChanels[0][0]]
-        else:
-            numChanels = [numChanels[0][0], numChanels[0][1]]
-        pattern = re.compile("(\D\d+_\w*)", re.MULTILINE)
-        supportedModes = pattern.findall(str(err))
+        try:
+            params = ['arecord', '-D', self.getAlsaRecordHardwareString(),
+                      '--dump-hw-params', '-d 1']
+            print("executing: " + str(params))
+            p = subprocess.Popen(params, 0, None, None, subprocess.PIPE,
+                                 subprocess.PIPE)
+            (out, err) = p.communicate()
+            print("hw infos : err : " + str(err) + " out : " + str(out))
+            # I rely on channels as it seems to be not translated
+            pattern = re.compile("CHANNELS:\s\[?(\d{1,2})\s?(\d{1,2})?\]?",
+                                 re.MULTILINE)
+            numChanels = pattern.findall(str(err))
+            # workaround to remove empty match in case of just single number
+            # because I was not clever enough to have a clean
+            # conditional regex...
+            if len(numChanels[0]) > 1 and not numChanels[0][1]:
+                print("only channel number present -> truncate")
+                numChanels = [numChanels[0][0]]
+            else:
+                numChanels = [numChanels[0][0], numChanels[0][1]]
+            pattern = re.compile("(\D\d+_\w*)", re.MULTILINE)
+            supportedModes = pattern.findall(str(err))
 
-        print(("numChannels : " + str(numChanels)))
-        print(("supportedModes : " + str(supportedModes)))
-        print(("No. supported Modes : " + str(len(supportedModes))))
-        return [numChanels, supportedModes]
+            print(("numChannels : " + str(numChanels)))
+            print(("supportedModes : " + str(supportedModes)))
+            print(("No. supported Modes : " + str(len(supportedModes))))
+            return [numChanels, supportedModes]
+        except Exception as inst:
+            print((
+                'failed to get rec hardware info...',
+                sys.exc_info()[0], type(inst), inst))
+        return None
 
     def startInputVolumeUpdate(self, channel=None):
         if channel is None:
@@ -426,6 +427,8 @@ class DRCDlg:
     def updateRecDeviceInfo(self):
         self.volumeUpdateBlocked = True
         recDeviceInfo = self.getRecordingDeviceInfo()
+        if recDeviceInfo is None:
+            return
         self.comboInputChanel.remove_all()
         # TODO: at the moment just 32 bit recording is supported. Maybe
         # check if other bitdepths make sense too
@@ -503,6 +506,9 @@ class DRCDlg:
         aCfg.endFrequency = int(self.entryEndFrequency.get_text())
         aCfg.sweepDuration = int(self.entrySweepDuration.get_text())
         aCfg.FIRFilterMode = self.comboboxFIRFilterMode.get_active()
+        aCfg.playHardwareIndex = self.alsaPlayHardwareCombo.get_active()
+        aCfg.recHardwareIndex = self.alsaRecHardwareCombo.get_active()
+        aCfg.recHardwareChannelIndex = self.comboInputChanel.get_active()
         fileExt = os.path.splitext(aCfg.filterFile)[-1]
         print(("ext = " + fileExt))
         if fileExt != ".wav":
@@ -527,29 +533,33 @@ class DRCDlg:
         (out, err) = p.communicate()
         print(("output from bruteFIR update script : " + str(out)))
 
-    def on_applyFilterBruteFIR(self, some_param):
+    def on_applyFilterBruteFIR(self):
         self.updateBruteFIRCfg(True)
         self.saveSettings()
         self.set_filter()
         self.checkbuttonEnableFiltering.set_active(True)
 
-    def on_applyFilterGST(self, some_param):
+    def on_applyFilterGST(self):
         self.comboboxFIRFilterMode.set_active(1)
         self.saveSettings()
         self.set_filter()
         self.updateBruteFIRCfg(False)
         self.checkbuttonEnableFiltering.set_active(True)
 
-    def on_checkbuttonEnableFiltering(self, some_param):
-        enableFiltering = some_param.get_active()
-        aCfg = DRCConfig()
-        if enableFiltering is True:
-            self.comboboxFIRFilterMode.set_active(aCfg.FIRFilterMode)
-        else:
-            self.comboboxFIRFilterMode.set_active(0)
+    def disableFiltering(self):
+        self.comboboxFIRFilterMode.set_active(0)
         self.saveSettings()
         self.set_filter()
         self.updateBruteFIRCfg(False)
+
+    def on_FIRFilterModeChanged(self, some_param):
+        FIRFilterMode = self.comboboxFIRFilterMode.get_active()
+        if FIRFilterMode is 0:
+            self.disableFiltering()
+        elif FIRFilterMode is 1:
+            self.on_applyFilterGST()
+        else:
+            self.on_applyFilterBruteFIR()
 
     def getAlsaPlayHardwareString(self):
         if len(self.alsaPlayHardwareList) < 1:
