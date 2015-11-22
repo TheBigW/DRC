@@ -416,8 +416,8 @@ static void
 
     /* Normalize to make sure IFFT(FFT(x)) == x */
     for (i = 0; i < self->frequency_response_length * self->kernel_channels; i++) {
-      self->frequency_response[i].r /= block_length;
-      self->frequency_response[i].i /= block_length;
+      self->frequency_response[i].r /= block_length << 1;
+      self->frequency_response[i].i /= block_length << 1;
     }
   }
 }
