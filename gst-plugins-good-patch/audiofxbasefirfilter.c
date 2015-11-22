@@ -119,7 +119,7 @@ process_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype * s
     self->buffer_length = buffer_length = kernel_length * channels; \
     self->buffer = buffer = g_new0 (gdouble, self->buffer_length); \
   } \
-  kernel_channel_offset = kernel_length ? self->kernel_channels > 1 : 0; \
+  kernel_channel_offset = self->kernel_channels > 1 ? kernel_length : 0; \
   GST_WARNING("kernel length : %i", kernel_length); \
   /* convolution */ \
   for (i = 0; i < num_samples; i++) { \
@@ -254,7 +254,7 @@ process_fft_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype
   guint kernel_length = self->kernel_length; \
   guint block_length = self->block_length; \
   guint buffer_length = self->buffer_length; \
-  guint real_buffer_length = buffer_length + kernel_length - 1; \
+  guint real_buffer_length = buffer_length + kernel_length; \
   guint buffer_fill = self->buffer_fill; \
   GstFFTF64 *fft = self->fft; \
   GstFFTF64 *ifft = self->ifft; \
@@ -264,7 +264,6 @@ process_fft_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype
   guint frequency_response_length = self->frequency_response_length; \
   gdouble *buffer = self->buffer; \
   guint generated = 0; \
-  guint kernel_channel_offset = 0; \
   gdouble re, im; \
   \
   if (!fft_buffer) \
@@ -281,12 +280,12 @@ process_fft_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype
    */ \
   if (!buffer) { \
     self->buffer_length = buffer_length = block_length; \
-    real_buffer_length = buffer_length + kernel_length - 1; \
+    real_buffer_length = buffer_length + kernel_length; \
     \
     self->buffer = buffer = g_new0 (gdouble, real_buffer_length * channels); \
     \
     /* Beginning has kernel_length-1 zeroes at the beginning */ \
-    self->buffer_fill = buffer_fill = kernel_length - 1; \
+    self->buffer_fill = buffer_fill = kernel_length; \
   } \
   \
   g_assert (self->buffer_length == block_length); \
@@ -297,7 +296,7 @@ process_fft_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype
     /* Deinterleave channels */ \
     for (i = 0; i < pass; i++) { \
       for (j = 0; j < channels; j++) { \
-        buffer[real_buffer_length * j + buffer_fill + kernel_length - 1 + i] = \
+        buffer[real_buffer_length * j + buffer_fill + kernel_length + i] = \
             src[i * channels + j]; \
       } \
     } \
@@ -312,11 +311,10 @@ process_fft_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype
     for (j = 0; j < channels; j++) { \
       /* Calculate FFT of input block */ \
       gst_fft_f64_fft (fft, \
-          buffer + real_buffer_length * j + kernel_length - 1, fft_buffer); \
+          buffer + real_buffer_length * j + kernel_length, fft_buffer); \
       \
       /* Complex multiplication of input and filter spectrum */ \
-      kernel_channel_offset = frequency_response_length ? self->kernel_channels > 1 : 0; \
-      current_channel_freq_reponse = frequency_response + ( j * kernel_channel_offset);  \
+      current_channel_freq_reponse = frequency_response + ( j * frequency_response_length);  \
       for (i = 0; i < frequency_response_length; i++) { \
 	re = fft_buffer[i].r; \
 	im = fft_buffer[i].i; \
@@ -334,23 +332,23 @@ process_fft_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype
           buffer + real_buffer_length * j); \
       \
       /* Copy all except the first kernel_length-1 samples to the output */ \
-      for (i = 0; i < buffer_length - kernel_length + 1; i++) { \
+      for (i = 0; i < buffer_length - kernel_length; i++) { \
         dst[i * channels + j] = \
-            buffer[real_buffer_length * j + kernel_length - 1 + i]; \
+            buffer[real_buffer_length * j + kernel_length + i]; \
       } \
       \
       /* Copy the last kernel_length-1 samples to the beginning for the next block */ \
-      for (i = 0; i < kernel_length - 1; i++) { \
-        buffer[real_buffer_length * j + kernel_length - 1 + i] = \
+      for (i = 0; i < kernel_length; i++) { \
+        buffer[real_buffer_length * j + kernel_length + i] = \
             buffer[real_buffer_length * j + buffer_length + i]; \
       } \
     } \
     \
-    generated += buffer_length - kernel_length + 1; \
-    dst += channels * (buffer_length - kernel_length + 1); \
+    generated += buffer_length - kernel_length; \
+    dst += channels * (buffer_length - kernel_length); \
     \
-    /* The the first kernel_length-1 samples are there already */ \
-    buffer_fill = kernel_length - 1; \
+    /* The first kernel_length samples are there already */ \
+    buffer_fill = kernel_length; \
   } \
   \
   /* Write back cached buffer_fill value */ \
@@ -389,7 +387,6 @@ static void
   if (self->kernel && self->kernel_length >= FFT_THRESHOLD
       && !self->low_latency) {
     guint block_length, i;
-    //guint kernel_channel_offset = 0;
     gdouble *kernel_tmp, *kernel = self->kernel;
 
     /* We process 4 * kernel_length samples per pass in FFT mode */
@@ -407,7 +404,7 @@ static void
 
     self->fft = gst_fft_f64_new (block_length, FALSE);
     self->ifft = gst_fft_f64_new (block_length, TRUE);
-    self->frequency_response_length = block_length / 2 + 1;
+    self->frequency_response_length = block_length / 2;
     self->frequency_response =
         g_new0(GstFFTF64Complex, self->frequency_response_length * self->kernel_channels);
     for(i = 0; i < self->kernel_channels; i++)
