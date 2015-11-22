@@ -119,7 +119,7 @@ process_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype * s
     self->buffer_length = buffer_length = kernel_length * channels; \
     self->buffer = buffer = g_new0 (gdouble, self->buffer_length); \
   } \
-  kernel_channel_offset = kernel_length ? self->kernel_channels > 1 : 0; \
+  kernel_channel_offset = self->kernel_channels > 1 ? kernel_length : 0; \
   GST_WARNING("kernel length : %i", kernel_length); \
   /* convolution */ \
   for (i = 0; i < num_samples; i++) { \
@@ -264,7 +264,6 @@ process_fft_##channels##_##width (GstAudioFXBaseFIRFilter * self, const g##ctype
   guint frequency_response_length = self->frequency_response_length; \
   gdouble *buffer = self->buffer; \
   guint generated = 0; \
-  guint kernel_channel_offset = 0; \
   gdouble re, im; \
   \
   if (!fft_buffer) \

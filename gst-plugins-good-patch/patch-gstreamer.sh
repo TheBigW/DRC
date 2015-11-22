@@ -1,4 +1,4 @@
-GST_PLUGIN_VERSION=1.6.0
+GST_PLUGIN_VERSION=1.4.5
 apt-get source gstreamer1.0-plugins-good
 #sudo apt-get install auto-apt
 #sudo auto-apt update
