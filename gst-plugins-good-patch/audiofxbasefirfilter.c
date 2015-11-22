@@ -1065,7 +1065,7 @@ gst_audio_fx_base_fir_filter_set_multi_kernel (GstAudioFXBaseFIRFilter *self, gd
     } else {
       channels = GST_AUDIO_FILTER_CHANNELS (self);
     }
-    if( kernel_channels >= channels )
+    if( channels > kernel_channels )
     {
 		self->kernel_channels = 1;
 		GST_WARNING("to few kernels for current channels -> reset to 1");
