@@ -354,7 +354,7 @@ class DRCDlg:
 
         self.exec_2ChannelMeasure = self.uibuilder.get_object(
             "checkbutton_2ChannelMeasure")
-        self.exec_2ChannelMeasure.set_sensitive(self.parent.hasMultiKernel)
+        self.exec_2ChannelMeasure.set_sensitive(True)
 
         self.entryMeasureIterations = self.uibuilder.get_object(
             "spinIterations")
