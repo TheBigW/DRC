@@ -32,17 +32,12 @@ else
  echo "IMPULSE_FILE : " $IMPULSE_FILE
 fi
 
-echo "removing leading silence"
-REM_SILENCE_IMP_FILE=/tmp/rem_silence_imp.wav
-sox $IMPULSE_FILE $REM_SILENCE_IMP_FILE silence 1 0.0005 0.002%
-
-
 #loop over NUM_CHANNELS and create a filter for each channel
 for ((i=1;i<=NUM_CHANNELS;i++));
 do
     PCM_IMP_FILENAME=${TMP}/impulse_chanel$i.pcm    
     REMIX_PARAM="remix "$i
-    $SOX $REM_SILENCE_IMP_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
+    $SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
     echo DRCCfgFile : $DRC_CFG_FILE
     echo "calculating filters"
     PCM_FILTER=${TMP}/filter$i.pcm

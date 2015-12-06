@@ -57,4 +57,7 @@ for installation on Ubuntu: sudo apt-get install alsa-utils sox
 
 for those with some courage to try some new functionality: DRC supports multi channel correction, meaning a separate measure/filter per audio channel. To support this gstreamer plugins-good need to be patched as long as this change gets not a part of the gstreamer-plugins-good (see gst-plugins-good-patch folder) - I use it this way myself on Ubuntu 14.04/15.04.
 
+<h4>experimenal functions and further development</h4>
+There are 2 experimental functions which only work to a limited extend: brutefir support and iterative measurements. Both shall be understood as an outlook and are not fully supported yet. brutefir support at least creates a split of the current filter suitable for brutefir use directly in the home directory. Brutefir is a good way to achieve szstem wide DRC while the rhythmbox related application is limited just to RB.
+
 Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.

@@ -45,7 +45,7 @@ LSLEN="$5"
 LSSIL="$6"
 INDEV="$7"
 OUTDEV="$8"
-IMPFILE="$9"
+IMPFILE="${9}"
 AMPLITUDE="${10}"
 REC_CHANNEL="${11}"
 MEASURE_LOOPS="${12}"
@@ -87,39 +87,38 @@ $GLSWEEP $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/ms
 $ECHO "Converting 1 channel sweep to play format..."
 $SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -r $RATE -c 2 $SOXFMT ${TMP}"/msplaysweep_pure"${PLAY_CHANNEL}".wav" $PLAY_SWEEP_PARAM
 
-$ECHO "generating pre-sweep-start indicator: sine + 2 sec silence at start"
-$SOX -n -r 44100 ${TMP}/sweep_start.wav synth 1 sin 1000 pad 2 0 vol 1.4
+$ECHO "generating pre-sweep-start indicator: 1 sec trapezium + 2 sec silence at start"
+$SOX -c2 -r $RATE -n /tmp/sweep_start.wav synth 1 trapezium 11025 pad 2 0
 
 $ECHO "adding pre-sweep-detector to both channels"
 #no remix for now which leads to the start marker beeing present in both channels
-$SOX -c2 ${TMP}"/sweep_start.wav" ${TMP}"/msplaysweep_pure"${PLAY_CHANNEL}".wav" ${TMP}"/msplaysweep"${PLAY_CHANNEL}".wav"
+$SOX ${TMP}"/sweep_start.wav" ${TMP}"/msplaysweep_pure"${PLAY_CHANNEL}".wav" ${TMP}"/msplaysweep"${PLAY_CHANNEL}".wav"
 
 # Filesystem sync
-$ECHO "Waiting 5 seconds for filesystem sync..."
+$ECHO "doing filesystem sync..."
 $SYNC
 
 REC_SWEEP_BASE=${TMP}"/msrecsweep"${PLAY_CHANNEL}
 REC_SWEEP_FILE_WAV=$REC_SWEEP_BASE".wav"
 REC_SWEEP_FILE_PCM=$REC_SWEEP_BASE".pcm"
 MERGE_FILES=""
-
+MERGE_FILES_IMP_RESP=""
+IMP_FILE_ITER_WAV=""
+REM_SILENCE_IMP_FILE=""
 #loop over MEASURE_LOOPS
 for ((i=1;i<=MEASURE_LOOPS;i++));
-do
-	$SLEEP 5
+do	
+	$SLEEP 2
 	LOOP_REC_PCM_NAME=$REC_SWEEP_BASE$i".pcm"
 	LOOP_REC_WAV_NAME=$REC_SWEEP_BASE$i".wav"
-	# Record the sweep
-	$ECHO "Sweep recording."
-	$SLEEP 1
-	RLEN=$(( $LSLEN + $LSSIL * 2 ))
-	
+	# Record the sweep - swwep length + 3s leadin marker
+	RLEN=$(( 3 + $LSLEN + $LSSIL * 2 ))
 	if [ $TEST_MODE == true ]; then\
-		echo "simulating record!!!\n"
+		$ECHO "simulating record!!!\n"
 		$APLAY -D $OUTDEV ${TMP}/msplaysweep.wav
 		LOOP_AMPLITUDE=$(bc <<< "scale=2;$AMPLITUDE +($i/10)")
 		SIM_AMPLITUDE=$LOOP_AMPLITUDE
-		echo "Sim Amplitude: "$SIM_AMPLITUDE" to : "$LOOP_REC_WAV_NAME"\n"
+		$ECHO "Sim Amplitude: "$SIM_AMPLITUDE" to : "$LOOP_REC_WAV_NAME"\n"
 		#LEADIN=$(bc <<< "scale=1;$LEADIN+($i*10)")
 		$GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $LOOP_REC_PCM_NAME ${TMP}/dummy_inverse.pcm
 		$SOX -t raw -r $RATE -c 1 -e float -b32 $LOOP_REC_PCM_NAME -t wav -r $RATE -c 1 $SOXFMT $LOOP_REC_WAV_NAME $PLAY_SWEEP_PARAM
@@ -127,32 +126,47 @@ do
 		$APLAY -D $OUTDEV ${TMP}"/msplaysweep"${PLAY_CHANNEL}".wav" &
 		$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN $LOOP_REC_WAV_NAME
 	fi
-	echo "extract real measurement from file"
+	$ECHO "extract real measurement from file"
 	SILENCE_REMOVE_FILE=${TMP}"/rem_silence_meas_"${PLAY_CHANNEL}_$i".wav"
-	sox $LOOP_REC_WAV_NAME $SILENCE_REMOVE_FILE silence 1 0.00005 10%
-	echo "now lets remove the lead in marker"
+	$SOX $LOOP_REC_WAV_NAME $SILENCE_REMOVE_FILE silence 1 100 5%
+	$ECHO "now lets remove the lead in marker"
 	MEAS_ONLY_FILE=${TMP}"/measured_pure_"${PLAY_CHANNEL}_$i".wav"
-	sox $SILENCE_REMOVE_FILE $MEAS_ONLY_FILE trim 2.5 $LSLEN
+	#maybe consider leaving a bit leadin and leadout in the measurement
+	$SOX $SILENCE_REMOVE_FILE $MEAS_ONLY_FILE trim 3 $LSLEN
 	MERGE_FILES=$MERGE_FILES" "$MEAS_ONLY_FILE
+	$ECHO "calculate individual impulse response\n"
+	IMP_FILE_ITER_PCM=${TMP}"/ImpResp_"${PLAY_CHANNEL}_$i".pcm"
+	$ECHO "recorded sweep conversion"
+	$SOX $MEAS_ONLY_FILE -t raw -r $RATE -e float -b 32 -c 1 $REC_SWEEP_FILE_PCM remix 1 0
+	IMP_FILE_ITER_WAV=${TMP}"/ImpResp_"${PLAY_CHANNEL}_$i".wav"
+	$LSCONV $REC_SWEEP_FILE_PCM ${TMP}/msinverse.pcm $IMP_FILE_ITER_PCM $REF_PARAM
+	$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_ITER_PCM -t wav -r $RATE -c 1 $SOXFMT $IMP_FILE_ITER_WAV
+	$ECHO "remove leading silence from impulse\n"
+	REM_SILENCE_IMP_FILE=${TMP}"/rem_silence_imp"${PLAY_CHANNEL}_$i".wav"
+	$SOX $IMP_FILE_ITER_WAV $REM_SILENCE_IMP_FILE silence 1 1000 0.01%
+	MERGE_FILES_IMP_RESP=$MERGE_FILES_IMP_RESP" "$REM_SILENCE_IMP_FILE
 done
 
 #merge all individual measurements
 if [ $MEASURE_LOOPS == 1 ]; then\
-	mv $LOOP_REC_WAV_NAME $REC_SWEEP_FILE_WAV
+	#copy existing impulse response
+	$ECHO "copy impulse file : cp "$REM_SILENCE_IMP_FILE $IMPFILE"\n"
+	cp $REM_SILENCE_IMP_FILE $IMPFILE
+	$ECHO "copied impulse file\n"
 else
-	sox -m $MERGE_FILES $REC_SWEEP_FILE_WAV
+	$SOX -m $MERGE_FILES $REC_SWEEP_FILE_WAV
+
+	$ECHO "recorded sweep conversion"
+	$SOX $REC_SWEEP_FILE_WAV -t raw -r $RATE -e float -b 32 -c 1 $REC_SWEEP_FILE_PCM remix 1 0
+
+	IMP_FILE_PCM="${TMP}/measured_impulse${PLAY_CHANNEL}.pcm"
+
+	# Extract the impulse response
+	$LSCONV $REC_SWEEP_FILE_PCM ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM 
+
+
+	#convert the result to wav
+	$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav -r $RATE -c 1 $SOXFMT $IMPFILE
+
+	$SOX -m $MERGE_FILES_IMP_RESP ${TMP}"/imp_"${PLAY_CHANNEL}"_med.wav"
 fi
-
-$ECHO "recorded sweep conversion"
-$SOX $REC_SWEEP_FILE_WAV -t raw -r $RATE -e float -b 32 -c 1 $REC_SWEEP_FILE_PCM remix 1 0
-
-IMP_FILE_PCM="${TMP}/measured_impulse${PLAY_CHANNEL}.pcm"
-
-# Extract the impulse response
-$LSCONV $REC_SWEEP_FILE_PCM ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM 
-
-
-#convert the result to wav
-$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav -r $RATE -c 1 $SOXFMT $IMPFILE
-
-

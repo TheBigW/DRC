@@ -27,4 +27,5 @@ else
     bash $messurescript $BIT_DEPTH $SAMPLE_RATE $START_FREQ $END_FREQ $DURATION $SILENCE_LENGTH $INPUT_HW $OUTPUT_HW "${TMP}/imp_r.wav" $AMPLITUDE $REC_CHANNEL $MEASURE_LOOPS r
     #combine both outputs to one file with sox
     sox -M "${TMP}/imp_l.wav" "${TMP}/imp_r.wav" ${IMP_OUT_FILE}
+    sox -M "${TMP}/imp_l_med.wav" "${TMP}/imp_r_med.wav" "${TMP}/impulse_resp_med.wav"
 fi

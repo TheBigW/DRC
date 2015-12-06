@@ -1,0 +1,87 @@
+    ##
+    ## DEFAULT GENERAL SETTINGS
+    ##
+    float_bits: 64;         # internal floating point precision
+    sampling_rate: 44100;      # sampling rate in Hz of audio interfaces
+    filter_length: 512,128;      # blocksize, blocks (taps = blocksize * blocks)
+    overflow_warnings: true;   # echo warnings to stderr if overflow occurs
+    show_progress: false;       # echo filtering progress to stderr
+    max_dither_table_size: 0;    # maximum size in bytes of precalculated dither
+    allow_poll_mode: false;    # allow use of input poll mode
+    modules_path: ".";       # extra path where to find BruteFIR modules
+    monitor_rate: false;       # monitor sample rate
+    powersave: true;       # pause filtering when input is zero
+    lock_memory: true;       # try to lock memory if realtime prio is set
+
+    ##
+    ## LOGIC
+    ##
+    logic: "cli" { port: 3000; };
+
+    ##
+    ## LAYOUT per channel
+    ##
+    ## usb in  >>-\         /---(convolve)-->> main
+    ##             \       /        |
+    ##             (+)-----       coef
+    ##             /       \ 
+    ## loop in >>-/         \----(delay)---->> headphone
+    ##                              |
+    ##                            blocks
+    ##
+
+    ##
+    ## OUTPUT
+    ##
+    ## output 0,1,2,3: main L, main R, headphone L, headphone R
+    ##
+    output "usb_out_main_L", "usb_out_main_R" {
+      device: "alsa" { device: "hw:1,0"; ignore_xrun: true;};
+      sample: "S32_LE";
+      channels: 2;
+      dither: false;
+    };
+
+    ##
+    ## INPUT
+    ##
+    input "left_in", "right_in" {
+	   device: "alsa" { device: "hw:Loopback,1";};
+	   sample: "S16_LE";
+	   channels: 2/0,1;
+	   delay: 0,0;
+	   maxdelay: -1;
+	   subdelay: 0,0;
+	   mute: false,false;
+	};
+    ##
+    ## COEFFICIENTS
+    ##
+    ## coef 0,1: music using excess phase correction (time domain correction)
+    ##
+    coeff "coef_music_excphase_L" {
+           filename: "filter_l.pcm";
+           format: "FLOAT_LE";     # file format
+    };
+    coeff "coef_music_excphase_R" {
+           filename: "filter_r.pcm";
+           format: "FLOAT_LE";     # file format
+    };
+
+    filter "filter_drc_L" {
+      from_inputs: "left_in";
+      to_outputs: "usb_out_main_L";
+      process: -1;
+      coeff: "coef_music_excphase_L";
+      delay: 0;
+      crossfade: false;
+    };
+
+    filter "filter_drc_R" {
+      from_inputs: "right_in";
+      to_outputs: "usb_out_main_R";
+      process: -1;
+      coeff: "coef_music_excphase_R";
+      delay: 0;
+      crossfade: false;
+    };
