@@ -106,7 +106,7 @@ MERGE_FILES_IMP_RESP=""
 IMP_FILE_ITER_WAV=""
 REM_SILENCE_IMP_FILE=""
 #loop over MEASURE_LOOPS
-for ((i=1;i<=MEASURE_LOOPS;i++));
+for ((i=0;i<MEASURE_LOOPS;i++));
 do	
 	$SLEEP 2
 	LOOP_REC_PCM_NAME=$REC_SWEEP_BASE$i".pcm"
@@ -140,11 +140,6 @@ do
 	$SOX $MEAS_ONLY_FILE -t raw -r $RATE -e float -b 32 -c 1 $REC_SWEEP_FILE_PCM remix 1 0
 	IMP_FILE_ITER_WAV=${TMP}"/ImpResp_"${PLAY_CHANNEL}_$i".wav"
 	$LSCONV $REC_SWEEP_FILE_PCM ${TMP}/msinverse.pcm $IMP_FILE_ITER_PCM $REF_PARAM
-	$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_ITER_PCM -t wav -r $RATE -c 1 $SOXFMT $IMP_FILE_ITER_WAV
-	$ECHO "remove leading silence from impulse\n"
-	REM_SILENCE_IMP_FILE=${TMP}"/rem_silence_imp"${PLAY_CHANNEL}_$i".wav"
-	$SOX $IMP_FILE_ITER_WAV $REM_SILENCE_IMP_FILE silence 1 1000 0.01%
-	MERGE_FILES_IMP_RESP=$MERGE_FILES_IMP_RESP" "$REM_SILENCE_IMP_FILE
 done
 
 #merge all individual measurements
@@ -154,6 +149,7 @@ if [ $MEASURE_LOOPS == 1 ]; then\
 	cp $REM_SILENCE_IMP_FILE $IMPFILE
 	$ECHO "copied impulse file\n"
 else
+	#TODO remove this non-sense...
 	$SOX -m $MERGE_FILES $REC_SWEEP_FILE_WAV
 
 	$ECHO "recorded sweep conversion"

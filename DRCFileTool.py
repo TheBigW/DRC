@@ -15,16 +15,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 import os
+import subprocess
 import struct
 import math
 from array import array
 
 
 class WaveParams:
-    def __init__(self):
+    def __init__(self, numChannels=2):
         self.DataOffset = 0
-        self.numChannels = 0
-        self.sampleByteSize = 0
+        self.numChannels = numChannels
+        self.sampleByteSize = 4
+        self.maxSampleValue = []
+        self.minSampleValue = []
+        self.maxSampleValuePos = []
+        self.minSampleValuePos = []
+        self.data = []
+        for chanel in range(0, self.numChannels):
+            dataArr = []
+            self.data.append(dataArr)
+            self.maxSampleValue.append(-1)
+            self.minSampleValue.append(1)
+            self.maxSampleValuePos.append(-1)
+            self.minSampleValuePos.append(-1)
 
 
 # WavHeader.py
@@ -39,7 +52,7 @@ def PrintWavHeader(strWAVFile):
 
     def DumpHeaderOutput(structHeaderFields):
         for key in structHeaderFields.keys():
-            print("%s: " % (key), structHeaderFields[key])
+            print(("%s: " % (key), structHeaderFields[key]))
             # end for
 
     # Open file
@@ -93,15 +106,15 @@ def PrintWavHeader(strWAVFile):
     # Dump subchunk list
     print("Subchunks Found: ")
     for chunkName in chunksList:
-        print("%s, " % (chunkName), )
+        print(("%s, " % (chunkName), ))
     # end for
     print("\n")
     # Dump data chunk information
     if dataChunkLocation != 0:
         fileIn.seek(dataChunkLocation)
         bufHeader = fileIn.read(8)
-        print("Data Chunk located at offset [%s] of data length [%s] bytes" %
-              (dataChunkLocation, struct.unpack('<L', bufHeader[4:8])[0]))
+        print(("Data Chunk located at offset [%s] of data length [%s] bytes" %
+              (dataChunkLocation, struct.unpack('<L', bufHeader[4:8])[0])))
     # endif
     # Print output
     stHeaderFields['Filename'] = os.path.basename(strWAVFile)
@@ -115,58 +128,86 @@ def PrintWavHeader(strWAVFile):
     return params
 
 
-def debugDumpAppliedFilter(filter_array):
+def dumpSoundDataToFile(data, filename, writeAsText=False):
     f = open(
-        '/tmp/appliedFilter.raw',
+        filename,
         'wb')
     print("convert to array")
-    float_array = array('f', filter_array)
+    float_array = array('f', data)
     print("writing to file...")
     float_array.tofile(f)
     f.close()
     # dump textual representation too
-    theFile = open(
-        '/tmp/appliedFilter.txt',
-        'w')
-    for item in filter_array:
-        theFile.write("%s\n" % item)
-    theFile.close()
+    if writeAsText:
+        theFile = open(
+            filename + '.txt',
+            'w')
+        for item in data:
+            theFile.write("%s\n" % item)
+        theFile.close()
 
 
-def LoadRawFile(filename, numChanels, sampleByteSize=4, offset=0):
-    print("numChanels : ", numChanels)
+def LoadRawFile(filename, params=WaveParams()):
+    print(("numChanels : ", params.numChannels))
     filterFile = open(filename, "rb")
-    filter_array = []
-    for chanel in range(0, numChanels):
-        channel_filter = []
-        filter_array.append(channel_filter)
-    filterFile.seek(offset)
-    readData = filterFile.read(sampleByteSize)
-    while len(readData) == sampleByteSize:
-        for chanel in range(0, numChanels):
-            floatSample = struct.unpack('f', readData)[0]
-            readData = filterFile.read(sampleByteSize)
+
+    filterFile.seek(params.DataOffset)
+    readData = filterFile.read(params.sampleByteSize)
+    while len(readData) == params.sampleByteSize:
+        for chanel in range(0, params.numChannels):
+            floatSample = float(struct.unpack('f', readData)[0])
+            readData = filterFile.read(params.sampleByteSize)
             if math.isnan(floatSample):
-                # print( "value is NaN : resetting to 0" )
-                floatSample = 0
-            filter_array[chanel].append(floatSample)
+                print(("value is NaN : resetting to 0"))
+                floatSample = float(0.0)
+            if params.maxSampleValue[chanel] < floatSample:
+                params.maxSampleValue[chanel] = floatSample
+                params.maxSampleValuePos[chanel] = len(params.data[chanel])
+                #print("found max : ",params.maxSampleValue,
+                #    params.maxSampleValuePos)
+            if params.minSampleValue[chanel] > floatSample:
+                params.minSampleValue[chanel] = floatSample
+                params.minSampleValuePos[chanel] = len(params.data[chanel])
+            params.data[chanel].append(floatSample)
     # dump the filter to check
-    if numChanels > 1:
-        print(("loaded r/l: " + str(len(filter_array[0])) + "/" +
-            str(len(filter_array[1])) + " samples per channel successfully"))
+    if params.numChannels > 1:
+        print(("loaded r/l: " + str(len(params.data[0])) + "/" +
+            str(len(params.data[1])) + " samples per channel successfully"))
     else:
-        print(("loaded one chanel filter: " + str(len(filter_array[0])) +
+        print(("loaded one chanel filter: " + str(len(params.data[0])) +
             " with samples successfully"))
-    #debugDumpAppliedFilter(filter_array[0])
-    return filter_array
+    print(("numChanels : ", params.numChannels, "maxPos : ",
+        str(params.maxSampleValuePos), "maxValue : ",
+        str(params.maxSampleValue), "file: ", filename))
+
+    #dumpSoundDataToFile(params.data[0], /tmp/filterdmp.pcm, True)
+    return params
+
+
+def WriteWaveFile(params, outFileName):
+    #poor mans way to write a wave file - we write 2 temporary pcm files
+    #and convert to wav using sox :)
+    commandLine = ['sox', '-M']
+    pcmParams = ['-traw', '-c1', '-r41100', '-efloat', '-b32']
+    #TODO : do properly once prototype works
+    for chanel in range(0, params.numChannels):
+        strFileName = "/tmp/channel_" + str(chanel) + ".pcm"
+        commandLine.extend(pcmParams)
+        dumpSoundDataToFile(params.data[chanel], strFileName)
+        commandLine.append(strFileName)
+    commandLine.extend(['-twav', '-r44100', '-c2'])
+    commandLine.append(outFileName)
+    print(("executing sox to create wave file : " + str(commandLine)))
+    p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE,
+        subprocess.PIPE)
+    (out, err) = p.communicate()
+    print(("output from sox conversion : " + str(out) + " error : " + str(err)))
 
 
 def LoadWaveFile(filename):
     params = PrintWavHeader(filename)
-    numChanels = params.numChanels
-    print("numChanels : ", numChanels)
-    return LoadRawFile(filename, numChanels, params.sampleByteSize,
-                       params.DataOffset)
+    params = LoadRawFile(filename, params)
+    return params
 
 
 def fillTestFilter(filter_kernel):
@@ -181,7 +222,6 @@ def fillTestFilter(filter_kernel):
 
 
 def LoadAudioFile(filename, numChannels):
-    filter_array = [[]]
     # return fillTestFilter( [0.25, 0.23, 0.15, 0.06, 0, -0.06, -0.06,
     # -0.02, 0.0, 0.01, 0.01, 0] ) + fillTestFilter([0.25, 0.06, 0, -0.06,
     # -0.06, -0.02, 0, 0.01, 0.01, 0.0, 0.0, 0.0])
@@ -189,7 +229,6 @@ def LoadAudioFile(filename, numChannels):
         fileExt = os.path.splitext(filename)[-1]
         print("ext = " + fileExt)
         if fileExt == ".wav":
-            filter_array = LoadWaveFile(filename)
-        else:
-            filter_array = LoadRawFile(filename, numChannels)
-    return filter_array
+            return LoadWaveFile(filename)
+        return LoadRawFile(filename, WaveParams(numChannels) )
+

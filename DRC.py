@@ -70,8 +70,9 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             try:
                 source = self.shell_player.get_playing_source()
                 self.shell_player.pause()
-                filter_array = DRCFileTool.LoadAudioFile(filterFileName,
+                audioParams = DRCFileTool.LoadAudioFile(filterFileName,
                                                          aCfg.numFilterChanels)
+                filter_array = audioParams.data
                 # pass the filter data to the fir filter
                 num_filter_coeff = len(filter_array)
                 if num_filter_coeff > 0:

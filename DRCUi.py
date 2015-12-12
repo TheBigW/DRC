@@ -199,14 +199,14 @@ class MeasureQADlg():
         btnViewAudacity = self.uibuilder.get_object("buttonViewRecSweep")
         btnViewAudacity.connect("clicked", self.on_viewRecSweep)
 
-        genSweepData = DRCFileTool.LoadAudioFile(genSweepFile, 1)
-        self.setEvalData(genSweepData[0], "labelInputSweepData")
+        audioParams = DRCFileTool.LoadAudioFile(genSweepFile, 1)
+        self.setEvalData(audioParams, "labelInputSweepData")
         self.measSweepFile = measSweepFile
-        measSweepData = DRCFileTool.LoadAudioFile(measSweepFile, 1)
-        minMaxRec = self.setEvalData(measSweepData[0],
+        audioParams = DRCFileTool.LoadAudioFile(measSweepFile, 1)
+        minMaxRec = self.setEvalData(audioParams,
                                      "labelRecordedSweepData")
-        impRespData = DRCFileTool.LoadAudioFile(impRespFile, 1)
-        self.setEvalData(impRespData[0], "labelImpResponseData")
+        audioParams = DRCFileTool.LoadAudioFile(impRespFile, 1)
+        self.setEvalData(audioParams, "labelImpResponseData")
         # TODO: add evaluation
         label = self.uibuilder.get_object("labelRecomendationResult")
         result = "check values : recorded results seem to be fine to proceed"
@@ -221,13 +221,14 @@ class MeasureQADlg():
         commandLine = [scriptName, measSweepWaveFile]
         subprocess.Popen(commandLine)
 
-    def setEvalData(self, dataArray, labelID):
-        minData = min(dataArray)
-        maxData = max(dataArray)
+    def setEvalData(self, dataInfo, labelID):
         label = self.uibuilder.get_object(labelID)
-        text = "Min: " + str(minData) + " Max: " + str(maxData)
+        text = "Min/Pos: " + str(dataInfo.minSampleValue) + "/" + \
+            str(dataInfo.minSampleValuePos) + \
+            " Max/Pos: " + str(dataInfo.maxSampleValue) + "/" + \
+            str(dataInfo.maxSampleValuePos)
         label.set_text(text)
-        return [minData, maxData]
+        return [dataInfo.minSampleValue[0], dataInfo.maxSampleValue[0]]
 
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
@@ -249,7 +250,7 @@ def getDeviceListFromAlsaOutput(command):
     return alsaHardwareList
 
 
-def fillComboFromDeviceList(combo, alsaHardwareList,active):
+def fillComboFromDeviceList(combo, alsaHardwareList, active):
     for i in range(0, len(alsaHardwareList)):
         combo.append_text(
             alsaHardwareList[i][1] + ": " + alsaHardwareList[i][3])
@@ -590,6 +591,45 @@ class DRCDlg:
             os.makedirs(measureResultsDir)
         return measureResultsDir
 
+    def calculateAvgImpResponse(self):
+        numIterations = int(self.entryMeasureIterations.get_value())
+        if numIterations > 1:
+            numChanels = 2
+            if not self.exec_2ChannelMeasure.get_active():
+                numChanels = 1
+            chanelSel = ['l', 'r']
+            maxValueStartOffset = 100
+            maxValueEndOffset = 20000
+            avgImpulseLength = maxValueEndOffset + maxValueStartOffset
+            #loop over all impulse responses for all chanels and
+            #calculate average response
+            result = DRCFileTool.WaveParams()
+            for chanel in range(0, numChanels):
+                avgData = []
+                for index in range(0, avgImpulseLength):
+                    avgData.append(float(0.0))
+                for i in range(0, numIterations):
+                    strfilename = "/tmp/ImpResp_" + chanelSel[chanel] + "_" + \
+                        str(i) + ".pcm"
+                    params = DRCFileTool.LoadRawFile(strfilename,
+                        DRCFileTool.WaveParams(1))
+                    impulseStart = params.maxSampleValuePos[0] - \
+                        maxValueStartOffset
+                    #impulseEnd = params.maxSampleValuePos + maxValueEndOffset
+                    for index in range(0, avgImpulseLength):
+                        avgData[index] += params.data[0][impulseStart + index]
+                #finally normalize the result
+                for index in range(0, avgImpulseLength):
+                    avgData[index] = avgData[index] / float(numIterations)
+                #write the avg result to the result
+                result.data[chanel] = avgData
+            impOutputFile = self.getMeasureResultsDir() + "/impOutputFile"\
+                + datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + \
+                str(self.entryStartFrequency.get_text()) + \
+                "_" + str(self.entryEndFrequency.get_text()) + \
+                "_" + str(self.entrySweepDuration.get_text()) + "_avg.wav"
+            DRCFileTool.WriteWaveFile(result, impOutputFile)
+
     def on_execMeasure(self, param):
         self.inputVolumeUpdate.stop()
 
@@ -633,6 +673,7 @@ class DRCDlg:
                                self.sweep_level)
         evalDlg.run()
         self.notebook.next_page()
+        self.calculateAvgImpResponse()
 
     def changeCfgParamDRC(self, bufferStr, changeArray):
         newBuff = bufferStr

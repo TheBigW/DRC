@@ -59,5 +59,6 @@ for those with some courage to try some new functionality: DRC supports multi ch
 
 <h4>experimenal functions and further development</h4>
 There are 2 experimental functions which only work to a limited extend: brutefir support and iterative measurements. Both shall be understood as an outlook and are not fully supported yet. brutefir support at least creates a split of the current filter suitable for brutefir use directly in the home directory. Brutefir is a good way to achieve szstem wide DRC while the rhythmbox related application is limited just to RB.
+For the iterative measurement the impulse response is averaged over the amount of measurements. There is a second file created in the MeasureResults folder names '_avg'. This can be used alternatively. The original create response is a fruitless attempt to average the measurement data directly (may also work by accident :)).
 
 Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.
