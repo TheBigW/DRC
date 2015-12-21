@@ -68,6 +68,10 @@ fi
 
 $ECHO "sox params : " $SOXFMT
 
+$ECHO "cleaning up previous measurements" $SOXFMT
+rm $TMP/*.pcm
+rm $TMP/*.wav
+
 # determine channel to play the sweep to
 
 if [ -z "$PLAY_CHANNEL" ]; then
@@ -139,6 +143,7 @@ do
 	$ECHO "recorded sweep conversion"
 	$SOX $MEAS_ONLY_FILE -t raw -r $RATE -e float -b 32 -c 1 $REC_SWEEP_FILE_PCM remix 1 0
 	IMP_FILE_ITER_WAV=${TMP}"/ImpResp_"${PLAY_CHANNEL}_$i".wav"
+	REM_SILENCE_IMP_FILE=$IMP_FILE_ITER_WAV
 	$LSCONV $REC_SWEEP_FILE_PCM ${TMP}/msinverse.pcm $IMP_FILE_ITER_PCM $REF_PARAM
 done
 
