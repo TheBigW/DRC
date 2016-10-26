@@ -32,8 +32,6 @@ class DRCConfig:
         self.cfgFileName = configDir + "/" + DRC_CFG_FILE
         self.filterFile = ""
         self.recordGain = 0.5
-        self.startFrequency = 50
-        self.endFrequency = 21000
         self.sweepDuration = 40
         self.numFilterChanels = 1
         self.FIRFilterMode = 0
@@ -50,8 +48,6 @@ class DRCConfig:
             cfgFile = open(self.cfgFileName, 'r')
             cfg = Serializer.read(cfgFile, self)
             self.filterFile = cfg.filterFile
-            self.startFrequency = cfg.startFrequency
-            self.endFrequency = cfg.endFrequency
             self.sweepDuration = cfg.sweepDuration
             self.numFilterChanels = cfg.numFilterChanels
             self.FIRFilterMode = cfg.FIRFilterMode

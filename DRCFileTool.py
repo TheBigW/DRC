@@ -22,9 +22,12 @@ from array import array
 
 
 class WaveParams:
-    def __init__(self, numChannels=2):
+    def __init__(self, numChannels=None):
+        if numChannels is     None:
+            self.numChannels = 2
+        else:
+            self.numChannels = numChannels
         self.DataOffset = 0
-        self.numChannels = numChannels
         self.sampleByteSize = 4
         self.maxSampleValue = []
         self.minSampleValue = []
@@ -121,9 +124,8 @@ def PrintWavHeader(strWAVFile):
     DumpHeaderOutput(stHeaderFields)
     # Close file
     fileIn.close()
-    params = WaveParams()
+    params = WaveParams(int(stHeaderFields['NumChannels']))
     params.DataOffset = int(dataChunkLocation) + 8
-    params.numChanels = int(stHeaderFields['NumChannels'])
     params.sampleByteSize = int(stHeaderFields['BitsPerSample'] / 8)
     return params
 
@@ -148,7 +150,7 @@ def dumpSoundDataToFile(data, filename, writeAsText=False):
 
 
 def LoadRawFile(filename, params=WaveParams()):
-    print(("numChanels : ", params.numChannels))
+    print(("LoadRawFile : ", filename, " numChanels : ", params.numChannels))
     filterFile = open(filename, "rb")
 
     filterFile.seek(params.DataOffset)
@@ -193,9 +195,16 @@ def WriteWaveFile(params, outFileName):
     for chanel in range(0, params.numChannels):
         strFileName = "/tmp/channel_" + str(chanel) + ".pcm"
         commandLine.extend(pcmParams)
+        print(("numChanels : ", params.numChannels, "chanel: ", chanel))
         dumpSoundDataToFile(params.data[chanel], strFileName)
         commandLine.append(strFileName)
-    commandLine.extend(['-twav', '-r44100', '-c2'])
+    if params.numChannels > 1:
+        commandLine.extend(['-twav'])
+    else:
+        commandLine = ['sox', '-traw', '-c1', '-r41100',
+            '-efloat', '-b32']
+        commandLine.append(strFileName)
+        commandLine.extend(['-twav'])
     commandLine.append(outFileName)
     print(("executing sox to create wave file : " + str(commandLine)))
     p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE,
@@ -206,6 +215,7 @@ def WriteWaveFile(params, outFileName):
 
 def LoadWaveFile(filename):
     params = PrintWavHeader(filename)
+    print(("LoadWaveFile: numChannels : ", params.numChannels))
     params = LoadRawFile(filename, params)
     return params
 
@@ -225,10 +235,12 @@ def LoadAudioFile(filename, numChannels):
     # return fillTestFilter( [0.25, 0.23, 0.15, 0.06, 0, -0.06, -0.06,
     # -0.02, 0.0, 0.01, 0.01, 0] ) + fillTestFilter([0.25, 0.06, 0, -0.06,
     # -0.06, -0.02, 0, 0.01, 0.01, 0.0, 0.0, 0.0])
+    print(("LoadAudioFile: ", filename, " numChanels : ", numChannels))
     if filename != '':
         fileExt = os.path.splitext(filename)[-1]
         print("ext = " + fileExt)
         if fileExt == ".wav":
             return LoadWaveFile(filename)
-        return LoadRawFile(filename, WaveParams(numChannels) )
+        params = WaveParams(numChannels)
+        return LoadRawFile(filename, params)
 

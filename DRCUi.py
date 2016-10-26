@@ -16,245 +16,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 import os
 import sys
-import subprocess
 import re
 import datetime
-import threading
+import subprocess
+
 
 from gi.repository import Gtk, RB
 
 from DRCConfig import DRCConfig
+from MeasureQADlg import MeasureQADlg
+from MeasureQADlg import MeasureQARetVal
+from ChannelSelDlg import ChanelSelDlg
+from PORCCfgDlg import PORCCfgDlg
+from DRCCfgDlg import DRCCfgDlg
+from ImpRespDlg import ImpRespDlg
+from alsaTools import InputVolumeProcess
+import alsaTools
+
 import DRCFileTool
 import rb
 from DRCTargetCurveUI import EQControl
-
-
-class ChanelSelDlg():
-    def __init__(self, parent):
-        self.uibuilder = Gtk.Builder()
-        self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
-        self.dlg = self.uibuilder.get_object("channel_no_dlg")
-        self.check2ChanCombo = self.uibuilder.get_object(
-            "comboboxtextChannels")
-        self.check2ChanCombo.connect("changed", self.onChannelSelChanged)
-        self.numChannels = 1
-        okBtn = self.uibuilder.get_object("button_OK")
-        okBtn.connect("clicked", self.on_Ok)
-        cancelBtn = self.uibuilder.get_object("button_Cancel")
-        cancelBtn.connect("clicked", self.on_Cancel)
-
-    def onChannelSelChanged(self, combo):
-        selText = self.check2ChanCombo.get_active_text()
-        print("selected number of channels = " + selText)
-        self.numChannels = int(selText)
-
-    def on_Ok(self, param):
-        self.dlg.response(Gtk.ResponseType.OK)
-        self.dlg.set_visible(False)
-
-    def on_Cancel(self, param):
-        self.dlg.response(Gtk.ResponseType.CANCEL)
-        self.dlg.set_visible(False)
-
-    def run(self):
-        print("running ChanelSelDlg...")
-        return self.dlg.run()
-
-    def getNumChannels(self):
-        return self.numChannels
-
-
-class PORCCfgDlg():
-
-    def __init__(self, parent):
-        self.uibuilder = Gtk.Builder()
-        self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
-        self.dlg = self.uibuilder.get_object("porcCfgDlg")
-        okBtn = self.uibuilder.get_object("button_OKPORCDlg")
-        okBtn.connect("clicked", self.on_Ok)
-        cancelBtn = self.uibuilder.get_object("button_CancelPORCDlg")
-        cancelBtn.connect("clicked", self.on_Cancel)
-
-        self.checkbuttonMixedPhase = self.uibuilder.get_object(
-            "checkbuttonMixedPhase")
-
-    def on_Ok(self, param):
-        self.dlg.response(Gtk.ResponseType.OK)
-        self.dlg.set_visible(False)
-
-    def on_Cancel(self, param):
-        self.dlg.response(Gtk.ResponseType.CANCEL)
-        self.dlg.set_visible(False)
-
-    def getMixedPhaseEnabled(self):
-        return self.checkbuttonMixedPhase.get_active()
-
-    def run(self):
-        print("running dlg...")
-        return self.dlg.run()
-
-
-class DRCCfgDlg():
-
-    def __init__(self, parent):
-        self.uibuilder = Gtk.Builder()
-        self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
-        self.dlg = self.uibuilder.get_object("drcCfgDlg")
-        okBtn = self.uibuilder.get_object("button_OKDRCDlg")
-        okBtn.connect("clicked", self.on_Ok)
-        cancelBtn = self.uibuilder.get_object("button_CancelDRCDlg")
-        cancelBtn.connect("clicked", self.on_Cancel)
-        self.filechooserbuttonMicCalFile = self.uibuilder.get_object(
-            "filechooserbuttonMicCalFile")
-        self.filechooserbuttonMicCalFile.set_current_folder(
-            "/usr/share/drc/mic")
-        self.comboboxtext_norm_method = self.uibuilder.get_object(
-            "comboboxtext_norm_method")
-        self.filechooserbuttonBaseCfg = self.uibuilder.get_object(
-            "filechooserbuttonBaseCfg")
-        self.filechooserbuttonBaseCfg.set_current_folder(
-            "/usr/share/drc/config/44.1 kHz")
-        self.filechooserbuttonBaseCfg.set_filename(
-            "/usr/share/drc/config/44.1 kHz/erb-44.1.drc")
-
-    def on_Ok(self, param):
-        self.dlg.response(Gtk.ResponseType.OK)
-        self.dlg.set_visible(False)
-
-    def on_Cancel(self, param):
-        self.dlg.response(Gtk.ResponseType.CANCEL)
-        self.dlg.set_visible(False)
-
-    def getMicCalibrationFile(self):
-        return self.filechooserbuttonMicCalFile.get_filename()
-
-    def getNormMethod(self):
-        return self.comboboxtext_norm_method.get_active_text()
-
-    def getBaseCfg(self):
-        return self.filechooserbuttonBaseCfg.get_filename()
-
-    def run(self):
-        print("running dlg...")
-        return self.dlg.run()
-
-
-class InputVolumeProcess():
-    def __init__(self, updateProgressBar):
-        self.progressBar = updateProgressBar
-        self.proc = None
-        self.t = None
-
-    def reader_thread(self):
-        for line in iter(self.proc.stdout.readline, b''):
-            strLine = str(line)
-            # print("reader_thread : " + strLine)
-            result = self.pattern.findall(strLine)
-            if len(result) > 0:
-                # print("arecord: result : "+str(result))
-                iValue = int(result[0])
-                self.progressBar.set_fraction(iValue / 100)
-
-    def start(self, recHW, chanel, mode=None):
-        try:
-            self.stop()
-            if mode is None:
-                mode = "S32_LE"
-            # maybe using plughw and see if it removes the dependencies to
-            # use that at all
-            volAlsaCmd = ["arecord", "-D" + recHW, "-c" + chanel, "-d0",
-                          "-f" + mode, "/dev/null", "-vvv"]
-            print("starting volume monitoring with : " + str(volAlsaCmd))
-            self.proc = subprocess.Popen(volAlsaCmd, stdout=subprocess.PIPE,
-                                         stderr=subprocess.STDOUT)
-            self.pattern = re.compile("(\d*)%", re.MULTILINE)
-            self.t = threading.Thread(None, target=self.reader_thread).start()
-        except Exception as inst:
-            print('unexpected exception', sys.exc_info()[0], type(inst), inst)
-
-    def stop(self):
-        print("stoping volume monitoring")
-        if self.t is not None:
-            self.t.terminate()
-        if self.proc is not None:
-            self.proc.terminate()
-        self.progressBar.set_fraction(0.0)
-        self.proc = None
-        self.t = None
-
-
-class MeasureQADlg():
-    def __init__(self, parent, genSweepFile, measSweepFile, impRespFile,
-                 sweep_level):
-        self.uibuilder = Gtk.Builder()
-        self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
-        self.dlg = self.uibuilder.get_object("measureQualityDlg")
-        okBtn = self.uibuilder.get_object("button_OKMeasQA")
-        okBtn.connect("clicked", self.on_Ok)
-
-        btnViewAudacity = self.uibuilder.get_object("buttonViewRecSweep")
-        btnViewAudacity.connect("clicked", self.on_viewRecSweep)
-
-        audioParams = DRCFileTool.LoadAudioFile(genSweepFile, 1)
-        self.setEvalData(audioParams, "labelInputSweepData")
-        self.measSweepFile = measSweepFile
-        audioParams = DRCFileTool.LoadAudioFile(measSweepFile, 1)
-        minMaxRec = self.setEvalData(audioParams,
-                                     "labelRecordedSweepData")
-        audioParams = DRCFileTool.LoadAudioFile(impRespFile, 1)
-        self.setEvalData(audioParams, "labelImpResponseData")
-        # TODO: add evaluation
-        label = self.uibuilder.get_object("labelRecomendationResult")
-        result = "check values : recorded results seem to be fine to proceed"
-        if (minMaxRec[1] - minMaxRec[0]) < 0.1:
-            result = "check values : recorded volume seems to be quite low: " \
-                     "check proper input device or adjust gain"
-        label.set_text(result)
-
-    def on_viewRecSweep(self, param):
-        scriptName = "audacity"
-        measSweepWaveFile = os.path.splitext(self.measSweepFile)[0] + ".wav"
-        commandLine = [scriptName, measSweepWaveFile]
-        subprocess.Popen(commandLine)
-
-    def setEvalData(self, dataInfo, labelID):
-        label = self.uibuilder.get_object(labelID)
-        text = "Min/Pos: " + str(dataInfo.minSampleValue) + "/" + \
-            str(dataInfo.minSampleValuePos) + \
-            " Max/Pos: " + str(dataInfo.maxSampleValue) + "/" + \
-            str(dataInfo.maxSampleValuePos)
-        label.set_text(text)
-        return [dataInfo.minSampleValue[0], dataInfo.maxSampleValue[0]]
-
-    def on_Ok(self, param):
-        self.dlg.response(Gtk.ResponseType.OK)
-        self.dlg.set_visible(False)
-
-    def run(self):
-        print("running dlg...")
-        return self.dlg.run()
-
-
-def getDeviceListFromAlsaOutput(command):
-    p = subprocess.Popen([command, "-l"], 0, None, None, subprocess.PIPE,
-                         subprocess.PIPE)
-    (out, err) = p.communicate()
-    pattern = re.compile(
-        "\w* (\d*):\s.*?\[(.*?)\],\s.*?\s(\d*):.*?\s\[(.*?)\]", re.MULTILINE)
-    alsaHardwareList = pattern.findall(str(out))
-    print("found pattern : " + str(alsaHardwareList))
-    return alsaHardwareList
-
-
-def fillComboFromDeviceList(combo, alsaHardwareList, active):
-    for i in range(0, len(alsaHardwareList)):
-        combo.append_text(
-            alsaHardwareList[i][1] + ": " + alsaHardwareList[i][3])
-    combo.set_active(active)
 
 
 class DRCDlg:
@@ -278,14 +59,8 @@ class DRCDlg:
             self.filechooserbtn.set_current_folder(self.getFilterResultsDir())
 
         self.filechooserbtn.connect("file-set", self.on_file_selected)
-
-        self.entryStartFrequency = self.uibuilder.get_object(
-            "entryStartFrequency")
-        self.entryEndFrequency = self.uibuilder.get_object("entryEndFrequency")
         self.entrySweepDuration = self.uibuilder.get_object(
             "entrySweepDuration")
-        self.entryStartFrequency.set_text(str(aCfg.startFrequency))
-        self.entryEndFrequency.set_text(str(aCfg.endFrequency))
         self.entrySweepDuration.set_text(str(aCfg.sweepDuration))
 
         self.progressbarInputVolume = self.uibuilder.get_object(
@@ -297,12 +72,14 @@ class DRCDlg:
         self.execMeasureBtn = self.uibuilder.get_object("buttonMeassure")
         self.execMeasureBtn.connect("clicked", self.on_execMeasure)
 
-        self.alsaPlayHardwareList = getDeviceListFromAlsaOutput("aplay")
-        self.alsaRecHardwareList = getDeviceListFromAlsaOutput("arecord")
-        fillComboFromDeviceList(self.alsaPlayHardwareCombo,
+        self.alsaPlayHardwareList = alsaTools.getDeviceListFromAlsaOutput(
+            "aplay")
+        self.alsaRecHardwareList = alsaTools.getDeviceListFromAlsaOutput(
+            "arecord")
+        alsaTools.fillComboFromDeviceList(self.alsaPlayHardwareCombo,
                                 self.alsaPlayHardwareList,
                                 aCfg.playHardwareIndex)
-        fillComboFromDeviceList(self.alsaRecHardwareCombo,
+        alsaTools.fillComboFromDeviceList(self.alsaRecHardwareCombo,
                                 self.alsaRecHardwareList,
                                 aCfg.recHardwareIndex)
         self.alsaRecHardwareCombo.connect("changed", self.on_recDeviceChanged)
@@ -328,11 +105,11 @@ class DRCDlg:
         cancel_closeBtn = self.uibuilder.get_object("cancelButton")
         cancel_closeBtn.connect("clicked", self.on_Cancel)
 
-        self.impResponseFileChooserBtn = self.uibuilder.get_object(
-            "impResponseFileChooserBtn")
-        self.impResponseFileChooserBtn.set_current_folder(
-            self.getMeasureResultsDir())
-        self.impResponseFileChooserBtn.set_filter(audioFileFilter)
+        self.buttonSetImpRespFile = self.uibuilder.get_object(
+            "buttonSetImpRespFile")
+
+        self.buttonSetImpRespFile.connect("clicked", self.on_setImpRespFiles)
+
         self.filechooserbuttonTargetCurve = self.uibuilder.get_object(
             "filechooserbuttonTargetCurve")
         self.filechooserbuttonTargetCurve.set_current_folder(
@@ -349,6 +126,7 @@ class DRCDlg:
         self.drcCfgDlg = DRCCfgDlg(self.parent)
         self.porcCfgDlg = PORCCfgDlg(self.parent)
         self.channelSelDlg = ChanelSelDlg(self.parent)
+        self.impRespDlg = ImpRespDlg(self.parent, self.getMeasureResultsDir())
 
         self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked",
                                                 self.on_editTargetCurve)
@@ -356,9 +134,6 @@ class DRCDlg:
         self.exec_2ChannelMeasure = self.uibuilder.get_object(
             "checkbutton_2ChannelMeasure")
         self.exec_2ChannelMeasure.set_sensitive(True)
-
-        self.entryMeasureIterations = self.uibuilder.get_object(
-            "spinIterations")
 
         self.notebook = self.uibuilder.get_object("notebook1")
         self.volumeUpdateBlocked = False
@@ -381,46 +156,15 @@ class DRCDlg:
             self.filechooserbuttonTargetCurve.set_filename(
                 editDlg.getTargetCurveFile())
 
-    def getRecordingDeviceInfo(self):
-        try:
-            params = ['arecord', '-D', self.getAlsaRecordHardwareString(),
-                      '--dump-hw-params', '-d 1']
-            print("executing: " + str(params))
-            p = subprocess.Popen(params, 0, None, None, subprocess.PIPE,
-                                 subprocess.PIPE)
-            (out, err) = p.communicate()
-            print("hw infos : err : " + str(err) + " out : " + str(out))
-            # I rely on channels as it seems to be not translated
-            pattern = re.compile("CHANNELS:\s\[?(\d{1,2})\s?(\d{1,2})?\]?",
-                                 re.MULTILINE)
-            numChanels = pattern.findall(str(err))
-            # workaround to remove empty match in case of just single number
-            # because I was not clever enough to have a clean
-            # conditional regex...
-            if len(numChanels[0]) > 1 and not numChanels[0][1]:
-                print("only channel number present -> truncate")
-                numChanels = [numChanels[0][0]]
-            else:
-                numChanels = [numChanels[0][0], numChanels[0][1]]
-            pattern = re.compile("(\D\d+_\w*)", re.MULTILINE)
-            supportedModes = pattern.findall(str(err))
-
-            print(("numChannels : " + str(numChanels)))
-            print(("supportedModes : " + str(supportedModes)))
-            print(("No. supported Modes : " + str(len(supportedModes))))
-            return [numChanels, supportedModes]
-        except Exception as inst:
-            print((
-                'failed to get rec hardware info...',
-                sys.exc_info()[0], type(inst), inst))
-        return None
-
     def startInputVolumeUpdate(self, channel=None):
         if channel is None:
             channel = self.comboInputChanel.get_active_text()
         if not self.volumeUpdateBlocked:
             self.inputVolumeUpdate.start(self.getAlsaRecordHardwareString(),
                                          channel, self.mode)
+
+    def on_setImpRespFiles(self, button):
+        self.impRespDlg.run()
 
     def on_InputChanelChanged(self, combo):
         self.startInputVolumeUpdate(combo.get_active_text())
@@ -503,8 +247,6 @@ class DRCDlg:
         aCfg = DRCConfig()
         aCfg.filterFile = self.filechooserbtn.get_filename()
         aCfg.recordGain = self.sweep_level
-        aCfg.startFrequency = int(self.entryStartFrequency.get_text())
-        aCfg.endFrequency = int(self.entryEndFrequency.get_text())
         aCfg.sweepDuration = int(self.entrySweepDuration.get_text())
         aCfg.FIRFilterMode = self.comboboxFIRFilterMode.get_active()
         aCfg.playHardwareIndex = self.alsaPlayHardwareCombo.get_active()
@@ -562,6 +304,40 @@ class DRCDlg:
         else:
             self.on_applyFilterBruteFIR()
 
+    def getRecordingDeviceInfo(self):
+        try:
+            params = ['arecord', '-D', self.getAlsaRecordHardwareString(),
+                      '--dump-hw-params', '-d 1']
+            print("executing: " + str(params))
+            p = subprocess.Popen(params, 0, None, None, subprocess.PIPE,
+                                 subprocess.PIPE)
+            (out, err) = p.communicate()
+            print("hw infos : err : " + str(err) + " out : " + str(out))
+            # I rely on channels as it seems to be not translated
+            pattern = re.compile("CHANNELS:\s\[?(\d{1,2})\s?(\d{1,2})?\]?",
+                                 re.MULTILINE)
+            numChanels = pattern.findall(str(err))
+            # workaround to remove empty match in case of just single number
+            # because I was not clever enough to have a clean
+            # conditional regex...
+            if len(numChanels[0]) > 1 and not numChanels[0][1]:
+                print("only channel number present -> truncate")
+                numChanels = [numChanels[0][0]]
+            else:
+                numChanels = [numChanels[0][0], numChanels[0][1]]
+            pattern = re.compile("(\D\d+_\w*)", re.MULTILINE)
+            supportedModes = pattern.findall(str(err))
+
+            print(("numChannels : " + str(numChanels)))
+            print(("supportedModes : " + str(supportedModes)))
+            print(("No. supported Modes : " + str(len(supportedModes))))
+            return [numChanels, supportedModes]
+        except Exception as inst:
+            print((
+                'failed to get rec hardware info...',
+                sys.exc_info()[0], type(inst), inst))
+        return None
+
     def getAlsaPlayHardwareString(self):
         if len(self.alsaPlayHardwareList) < 1:
             print("no sound hardware detected")
@@ -591,89 +367,56 @@ class DRCDlg:
             os.makedirs(measureResultsDir)
         return measureResultsDir
 
-    def calculateAvgImpResponse(self):
-        numIterations = int(self.entryMeasureIterations.get_value())
-        if numIterations > 1:
-            numChanels = 2
-            if not self.exec_2ChannelMeasure.get_active():
-                numChanels = 1
-            chanelSel = ['l', 'r']
-            maxValueStartOffset = 100
-            maxValueEndOffset = 20000
-            avgImpulseLength = maxValueEndOffset + maxValueStartOffset
-            #loop over all impulse responses for all chanels and
-            #calculate average response
-            result = DRCFileTool.WaveParams()
-            for chanel in range(0, numChanels):
-                avgData = []
-                for index in range(0, avgImpulseLength):
-                    avgData.append(float(0.0))
-                for i in range(0, numIterations):
-                    strfilename = "/tmp/ImpResp_" + chanelSel[chanel] + "_" + \
-                        str(i) + ".pcm"
-                    params = DRCFileTool.LoadRawFile(strfilename,
-                        DRCFileTool.WaveParams(1))
-                    impulseStart = params.maxSampleValuePos[0] - \
-                        maxValueStartOffset
-                    #impulseEnd = params.maxSampleValuePos + maxValueEndOffset
-                    for index in range(0, avgImpulseLength):
-                        avgData[index] += params.data[0][impulseStart + index]
-                #finally normalize the result
-                for index in range(0, avgImpulseLength):
-                    avgData[index] = avgData[index] / float(numIterations)
-                #write the avg result to the result
-                result.data[chanel] = avgData
-            impOutputFile = self.getMeasureResultsDir() + "/impOutputFile"\
-                + datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + \
-                str(self.entryStartFrequency.get_text()) + \
-                "_" + str(self.entryEndFrequency.get_text()) + \
-                "_" + str(self.entrySweepDuration.get_text()) + "_avg.wav"
-            DRCFileTool.WriteWaveFile(result, impOutputFile)
-
     def on_execMeasure(self, param):
         self.inputVolumeUpdate.stop()
 
         # TODO: make the measure script output the volume and parse from
         # there during measurement
         scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
-        impOutputFile = self.getMeasureResultsDir() + "/impOutputFile" + \
+        #create new folder for this complete measurement
+        strResultsDir = self.getMeasureResultsDir() + "/" +\
                         datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + \
-                        str(self.entryStartFrequency.get_text()) + \
-                        "_" + str(self.entryEndFrequency.get_text()) + \
-                        "_" + str(self.entrySweepDuration.get_text()) + ".wav"
-        # execute measure script to generate filters
-        commandLine = [scriptName, str(self.sweep_level),
-                       self.getAlsaRecordHardwareString(),
-                       self.getAlsaPlayHardwareString(),
-                       str(self.entryStartFrequency.get_text()),
-                       str(self.entryEndFrequency.get_text()),
-                       str(self.entrySweepDuration.get_text()),
-                       impOutputFile,
-                       self.comboInputChanel.get_active_text(),
-                       str(self.exec_2ChannelMeasure.get_active()),
-                       str(int(self.entryMeasureIterations.get_value()))]
-        p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE,
-                             subprocess.PIPE)
-        (out, err) = p.communicate()
-        print("output from measure script : " + str(out) + " error : " + str(
-            None))
-        self.uibuilder.get_object("impResponseFileChooserBtn").set_filename(
-            impOutputFile)
-        # TODO: check for errors
-        # quality check:sweep file and measured result
-        # TODO: do multi channel check
+                        str(self.entrySweepDuration.get_text())
+        os.makedirs(strResultsDir)
         strResultSuffix = ""
         if self.exec_2ChannelMeasure.get_active():
             strResultSuffix = "l"
         raw_sweep_file_base_name = "/tmp/msrawsweep.pcm"
-        raw_sweep_recorded_base_name = "/tmp/msrecsweep" + strResultSuffix + \
-                                       ".pcm"
+        raw_sweep_recorded_base_name = "/tmp/msrecsweep" +\
+            strResultSuffix + ".pcm"
         evalDlg = MeasureQADlg(self.parent, raw_sweep_file_base_name,
-                               raw_sweep_recorded_base_name, impOutputFile,
-                               self.sweep_level)
-        evalDlg.run()
+                           raw_sweep_recorded_base_name, "",
+                           self.sweep_level)
+        iterLoopMeasure = 0
+        acquiredImpResFiles = []
+        while(True):
+            impOutputFile = strResultsDir + "/" + str(iterLoopMeasure) + ".wav"
+            # execute measure script to generate filters
+            commandLine = [scriptName, str(self.sweep_level),
+                       self.getAlsaRecordHardwareString(),
+                       self.getAlsaPlayHardwareString(),
+                       "10",
+                       "21000",
+                       str(self.entrySweepDuration.get_text()),
+                       impOutputFile,
+                       self.comboInputChanel.get_active_text(),
+                       str(self.exec_2ChannelMeasure.get_active())]
+            p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE,
+                             subprocess.PIPE)
+            (out, err) = p.communicate()
+            print(("output from measure script : " + str(out) + " error : "
+                + str(None)))
+            # quality check:sweep file and measured result
+            evalDlg.setImpRespFileName(impOutputFile)
+            evalDlg.run()
+            iterLoopMeasure += 1
+            if evalDlg.Result == MeasureQARetVal.Reject:
+                continue
+            acquiredImpResFiles.append(evalDlg.impRespFile)
+            if evalDlg.Result == MeasureQARetVal.Done:
+                break
+        self.impRespDlg.setFiles(acquiredImpResFiles)
         self.notebook.next_page()
-        self.calculateAvgImpResponse()
 
     def changeCfgParamDRC(self, bufferStr, changeArray):
         newBuff = bufferStr
@@ -700,11 +443,11 @@ class DRCDlg:
     def prepareDRC(self, impRespFile, filterResultFile):
         drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
         drcCfgFileName = os.path.basename(self.drcCfgDlg.getBaseCfg())
-        print("drcCfgBaseName : " + drcCfgFileName)
+        print(("drcCfgBaseName : " + drcCfgFileName))
         drcCfgSrcFile = self.drcCfgDlg.getBaseCfg()
         drcCfgDestFile = self.getTmpCfgDir() + "/" + drcCfgFileName
         drcScript.append(drcCfgDestFile)
-        print("drcCfgDestFile : " + drcCfgDestFile)
+        print(("drcCfgDestFile : " + drcCfgDestFile))
         # update filter file
         srcDrcCfgFile = open(drcCfgSrcFile, "r")
         srcData = srcDrcCfgFile.read()
@@ -714,7 +457,7 @@ class DRCDlg:
                               ["PSPointsFile",
                             self.filechooserbuttonTargetCurve.get_filename()],
                               ["PSNormType", normMethod]
-                              ]
+                             ]
         if micCalFile is not None:
             changeCfgFileArray.append(["MCFilterType", "M"])
             changeCfgFileArray.append(["MCPointsFile", micCalFile])
@@ -738,10 +481,43 @@ class DRCDlg:
         filterResultsDir = cachedir + "/DRCFilters"
         if not os.path.exists(filterResultsDir):
             print(
-                "DRC cache dir does not exist : creating -> " +
-                filterResultsDir)
+                ("DRC cache dir does not exist : creating -> " +
+                filterResultsDir))
             os.makedirs(filterResultsDir)
         return filterResultsDir
+
+    def calculateAvgImpResponse(self, files):
+        numIterations = len(files)
+        projectDir = os.path.dirname(os.path.abspath(files[0][0]))
+        impOutputFile = projectDir + "/impOutputFile"\
+                + datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + "avg.wav"
+        if numIterations > 1:
+            maxValueStartOffset = 100
+            maxValueEndOffset = 20000
+            avgImpulseLength = maxValueEndOffset + maxValueStartOffset
+            #loop over all impulse responses for all chanels and
+            #calculate average response
+            result = DRCFileTool.WaveParams()
+            avgData = []
+            for currFileInfo in files:
+                params = DRCFileTool.LoadWaveFile(currFileInfo[0])
+                result = DRCFileTool.WaveParams(params.numChannels)
+                for chanel in range(0, params.numChannels):
+                    if len(avgData) <= chanel:
+                        arr = [float(0.0)] * avgImpulseLength
+                        avgData.append(arr)
+                    impulseStart = params.maxSampleValuePos[chanel] - \
+                            maxValueStartOffset
+                    for index in range(0, avgImpulseLength):
+                        avgData[chanel][index] += float(params.data[chanel][
+                            impulseStart + index]) * currFileInfo[1]
+            #write the avg result to the result
+            result.data = avgData
+            print(("numChans Avg :", params.numChannels, result.numChannels))
+            DRCFileTool.WriteWaveFile(result, impOutputFile)
+        else:
+            impOutputFile = files[0][0]
+        return impOutputFile
 
     def on_calculateDRC(self, param):
         drcMethod = self.comboDRC.get_active_text()
@@ -750,12 +526,15 @@ class DRCDlg:
         filterResultFile = self.getFilterResultsDir() + "/Filter" + str(
             drcMethod) + datetime.datetime.now().strftime(
             "%Y%m%d%H%M%S") + ".wav"
-        impRespFile = self.impResponseFileChooserBtn.get_filename()
-        if impRespFile is None:
+        impRespFiles = self.impRespDlg.getImpRespFiles()
+        #go through all impRespFiles, average them and pass the
+        #result to the impRespFile
+        avgImpRespFile = self.calculateAvgImpResponse(impRespFiles)
+        if avgImpRespFile is None:
             self.showMsgBox("no file loaded")
             return
         if drcMethod == "DRC":
-            drcScript = self.prepareDRC(impRespFile, filterResultFile)
+            drcScript = self.prepareDRC(avgImpRespFile, filterResultFile)
         elif drcMethod == "PORC":
             drcScript = [rb.find_plugin_file(self.parent, "calcFilterPORC")]
             porcCommand = pluginPath + "/porc/porc.py"
@@ -771,13 +550,13 @@ class DRCDlg:
         # execute measure script to generate filters
         # last 2 parameters for all scripts allways impulse response and
         # result filter
-        drcScript.append(impRespFile)
+        drcScript.append(avgImpRespFile)
         drcScript.append(filterResultFile)
-        print("drc command line: " + str(drcScript))
+        print(("drc command line: " + str(drcScript)))
         p = subprocess.Popen(drcScript, 0, None, None, subprocess.PIPE,
                              subprocess.PIPE)
         (out, err) = p.communicate()
-        print("output from filter calculate script : " + str(out))
+        print((")output from filter calculate script : " + str(out)))
         self.filechooserbtn.set_filename(filterResultFile)
         self.set_filter()
         self.notebook.next_page()
