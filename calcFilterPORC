@@ -22,7 +22,7 @@ if [ "$extension" != "wav" ]; then
   #cleanup previous temp file if exists
   rm $DEST_WAV -f
   echo "destination wave file : " $DEST_WAV
-  sox -t raw -r $RATE -c 1 -e float -b32 ${IMPULSE_FILE} -t wav -r $RATE -e float -b32 ${DEST_WAV}
+  sox -t raw -r $RATE -c 1 -e float -b32 ${IMPULSE_FILE} -t wav ${DEST_WAV}
   IMPULSE_FILE="$DEST_WAV"
   echo "IMPULSE_FILE : " $IMPULSE_FILE
 else
@@ -43,4 +43,4 @@ python $PORC $PORC_PARAMS -n $TAPS -o bin -t "${TARGET_CURVE_FILE}" $IMPULSE_FIL
 #convert result to wav
 
 
-sox -t raw -r $RATE -c 2 -e float -b32 ${PCM_FILTER} -t wav -r $RATE -e float -b32 $FILTER_FILE
+sox -t raw -r $RATE -c 2 -e float -b32 ${PCM_FILTER} -t wav $FILTER_FILE
