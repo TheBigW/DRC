@@ -27,7 +27,7 @@ else
  #cleanup previous temp file if exists
  rm $DEST_WAV -f
  echo "destination wave file : " $DEST_WAV
- sox -t raw -r $RATE -c $NUM_CHANNELS -e float -b32 ${IMPULSE_FILE} -t wav -r $RATE -e float -b32 ${DEST_WAV}
+ sox -t raw -r $RATE -c $NUM_CHANNELS -e float -b32 ${IMPULSE_FILE} -t wav ${DEST_WAV}
  IMPULSE_FILE="$DEST_WAV"
  echo "IMPULSE_FILE : " $IMPULSE_FILE
 fi
@@ -43,7 +43,7 @@ do
     PCM_FILTER=${TMP}/filter$i.pcm
     drc --BCInFile=$PCM_IMP_FILENAME --PSOutFile=$PCM_FILTER --TCOutFile=test.pcm "${DRC_CFG_FILE}"
     WAV_FILTER=${TMP}/filter$i.wav
-     sox -t raw -r $RATE -c 1 -e float -b32 ${PCM_FILTER} -t wav -r $RATE -e float -b32 ${WAV_FILTER}
+    sox -t raw -r $RATE -c 1 -e float -b32 ${PCM_FILTER} -t wav ${WAV_FILTER}
     PCM_FILTERS[i]=$WAV_FILTER
 done
 
