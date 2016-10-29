@@ -70,6 +70,8 @@ AMPLITUDE="${10}"
 REC_CHANNEL="${11}"
 PLAY_CHANNEL="${12}"
 SWEEPFILE="sweep.pcm"
+ARECORDFMT="S32_LE"
+SOXFMT="-e signed-integer -b 32"
 
 # Generate the log sweep
 $ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $REC_CHANNEL $PLAY_CHANNEL
@@ -91,7 +93,7 @@ $GLSWEEP $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/ms
 
 # Convert to WAV file
 $ECHO "Converting sweep to play format..."
-$SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -c 2 ${TMP}/msplaysweep.wav $PLAY_SWEEP_PARAM
+$SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -c 2 $SOXFMT ${TMP}/msplaysweep.wav $PLAY_SWEEP_PARAM
 
 # Filesystem sync
 $ECHO "Waiting 5 seconds for filesystem sync..."
@@ -113,10 +115,10 @@ if [ $TEST_MODE == true ]; then\
 		$ECHO "Sim Amplitude: "$SIM_AMPLITUDE" to : "$REC_WAV_NAME" and : "$REC_PCM_NAME
 		$ECHO $GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $REC_PCM_NAME ${TMP}/dummy_inverse.pcm
 		$GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $REC_PCM_NAME ${TMP}/dummy_inverse.pcm
-		$SOX -t raw -r $RATE -c 1 -e float -b32 $REC_PCM_NAME -t wav $REC_WAV_NAME
+		$SOX -t raw -r $RATE -c 1 -e float -b32 $REC_PCM_NAME -t wav $SOXFMT $REC_WAV_NAME
 	else
 		$APLAY -D $OUTDEV ${TMP}/msplaysweep.wav &
-		$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c $REC_CHANNEL -d $RLEN $REC_WAV_NAME
+		$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c 2 -d $RLEN $REC_WAV_NAME
 fi
 
 $ECHO "recorded sweep conversion"
@@ -130,7 +132,7 @@ $LSCONV $REC_PCM_NAME ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM
 
 #convert the result to wav
 $ECHO -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav $IMPFILE
-$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav $IMPFILE
+$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav $SOXFMT $IMPFILE
 
 $ECHO "Temporary file cleanup..."
 
