@@ -227,7 +227,7 @@ def fillTestFilter(filter_kernel):
     for i in itFilter:
         filter_array.insert(0, i)
         next(itFilter)
-    print("test filter : " + str(filter_array))
+    print(("test filter : " + str(filter_array)))
     return filter_array
 
 

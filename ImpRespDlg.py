@@ -21,11 +21,24 @@ class ImpResLine():
         if filename is not None:
             self.fileChooser.set_filename(filename)
         grid.add(self.fileChooser)
-        self.entry = Gtk.Entry()
-        grid.attach_next_to(self.entry, self.fileChooser,
+        self.weightEntry = Gtk.Entry()
+        grid.attach_next_to(self.weightEntry, self.fileChooser,
+            Gtk.PositionType.RIGHT, 2, 1)
+        self.distanceEntry = Gtk.Entry()
+        grid.attach_next_to(self.distanceEntry, self.weightEntry,
             Gtk.PositionType.RIGHT, 2, 1)
         grid.show_all()
         grid.insert_row(noOfControls)
+
+
+class ImpRespFileInfo():
+
+    def __init__(self):
+        super(ImpRespFileInfo, self).__init__()
+        self.fileName = ""
+        self.centerDistanceInCentimeter = 0.0
+        self.weightingFactor = 0.0
+
 
 class ImpRespDlg():
 
@@ -78,7 +91,8 @@ class ImpRespDlg():
                 self.elementGrid, self.mesureResultsDir,
                 impRespFile, numFiles)
             self.fileControlList.append(impRespL)
-            impRespL.entry.set_text(str( 1.0 / float(numFiles) ))
+            impRespL.weightEntry.set_text(str(1.0 / float(numFiles)))
+            impRespL.distanceEntry.set_text(str(float(0.0)))
 
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
@@ -87,10 +101,13 @@ class ImpRespDlg():
     def getImpRespFiles(self):
         impRespFiles = []
         for fileControl in self.fileControlList:
-            impRespPair = []
-            impRespPair.append(fileControl.fileChooser.get_filename())
-            impRespPair.append(float(fileControl.entry.get_text()))
-            impRespFiles.append(impRespPair)
+            impRespInfo = ImpRespFileInfo()
+            impRespInfo.fileName = fileControl.fileChooser.get_filename()
+            impRespInfo.weightingFactor = float(
+                fileControl.weightEntry.get_text())
+            impRespInfo.centerDistanceInCentimeter = float(
+                fileControl.distanceEntry.get_text())
+            impRespFiles.append(impRespInfo)
         return impRespFiles
 
     def run(self):

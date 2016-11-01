@@ -308,11 +308,11 @@ class DRCDlg:
         try:
             params = ['arecord', '-D', self.getAlsaRecordHardwareString(),
                       '--dump-hw-params', '-d 1']
-            print("executing: " + str(params))
+            print(("executing: " + str(params)))
             p = subprocess.Popen(params, 0, None, None, subprocess.PIPE,
                                  subprocess.PIPE)
             (out, err) = p.communicate()
-            print("hw infos : err : " + str(err) + " out : " + str(out))
+            print(("hw infos : err : " + str(err) + " out : " + str(out)))
             # I rely on channels as it seems to be not translated
             pattern = re.compile("CHANNELS:\s\[?(\d{1,2})\s?(\d{1,2})?\]?",
                                  re.MULTILINE)
@@ -346,7 +346,7 @@ class DRCDlg:
         alsaDevicePlayback = "hw:" + str(
             self.alsaPlayHardwareList[alsHardwareSelIndex][0]) + "," + str(
             self.alsaPlayHardwareList[alsHardwareSelIndex][2])
-        print("alsa output device : " + alsaDevicePlayback)
+        print(("alsa output device : " + alsaDevicePlayback))
         return alsaDevicePlayback
 
     def getAlsaRecordHardwareString(self):
@@ -357,7 +357,7 @@ class DRCDlg:
         alsaDeviceRec = "hw:" + str(
             self.alsaRecHardwareList[alsHardwareSelIndex][0]) + "," + str(
             self.alsaRecHardwareList[alsHardwareSelIndex][2])
-        print("alsa input device : " + alsaDeviceRec)
+        print(("alsa input device : " + alsaDeviceRec))
         return alsaDeviceRec
 
     def getMeasureResultsDir(self):
@@ -486,9 +486,12 @@ class DRCDlg:
             os.makedirs(filterResultsDir)
         return filterResultsDir
 
+    def getSampleShift(self, distanceInCentimeter):
+        return 1.2849 * distanceInCentimeter
+
     def calculateAvgImpResponse(self, files):
         numIterations = len(files)
-        projectDir = os.path.dirname(os.path.abspath(files[0][0]))
+        projectDir = os.path.dirname(os.path.abspath(files[0].fileName))
         impOutputFile = projectDir + "/impOutputFile"\
                 + datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + "avg.wav"
         if numIterations > 1:
@@ -500,23 +503,25 @@ class DRCDlg:
             result = DRCFileTool.WaveParams()
             avgData = []
             for currFileInfo in files:
-                params = DRCFileTool.LoadWaveFile(currFileInfo[0])
+                params = DRCFileTool.LoadWaveFile(currFileInfo.fileName)
                 result = DRCFileTool.WaveParams(params.numChannels)
                 for chanel in range(0, params.numChannels):
                     if len(avgData) <= chanel:
                         arr = [float(0.0)] * avgImpulseLength
                         avgData.append(arr)
                     impulseStart = params.maxSampleValuePos[chanel] - \
-                            maxValueStartOffset
+                            maxValueStartOffset + self.getSampleShift(
+                                currFileInfo.centerDistanceInCentimeter)
                     for index in range(0, avgImpulseLength):
                         avgData[chanel][index] += float(params.data[chanel][
-                            impulseStart + index]) * currFileInfo[1]
+                            impulseStart + index]) * \
+                                currFileInfo.weightingFactor
             #write the avg result to the result
             result.data = avgData
             print(("numChans Avg :", params.numChannels, result.numChannels))
             DRCFileTool.WriteWaveFile(result, impOutputFile)
         else:
-            impOutputFile = files[0][0]
+            impOutputFile = files[0].fileName
         return impOutputFile
 
     def on_calculateDRC(self, param):
