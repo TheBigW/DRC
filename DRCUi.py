@@ -490,38 +490,34 @@ class DRCDlg:
         return 1.2849 * distanceInCentimeter
 
     def calculateAvgImpResponse(self, files):
-        numIterations = len(files)
         projectDir = os.path.dirname(os.path.abspath(files[0].fileName))
         impOutputFile = projectDir + "/impOutputFile"\
                 + datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + "avg.wav"
-        if numIterations > 1:
-            maxValueStartOffset = 100
-            maxValueEndOffset = 20000
-            avgImpulseLength = maxValueEndOffset + maxValueStartOffset
-            #loop over all impulse responses for all chanels and
-            #calculate average response
-            result = DRCFileTool.WaveParams()
-            avgData = []
-            for currFileInfo in files:
-                params = DRCFileTool.LoadWaveFile(currFileInfo.fileName)
-                result = DRCFileTool.WaveParams(params.numChannels)
-                for chanel in range(0, params.numChannels):
-                    if len(avgData) <= chanel:
-                        arr = [float(0.0)] * avgImpulseLength
-                        avgData.append(arr)
-                    impulseStart = params.maxSampleValuePos[chanel] - \
-                            maxValueStartOffset + self.getSampleShift(
-                                currFileInfo.centerDistanceInCentimeter)
-                    for index in range(0, avgImpulseLength):
-                        avgData[chanel][index] += float(params.data[chanel][
-                            impulseStart + index]) * \
-                                currFileInfo.weightingFactor
-            #write the avg result to the result
-            result.data = avgData
-            print(("numChans Avg :", params.numChannels, result.numChannels))
-            DRCFileTool.WriteWaveFile(result, impOutputFile)
-        else:
-            impOutputFile = files[0].fileName
+        maxValueStartOffset = 100
+        maxValueEndOffset = 20000
+        avgImpulseLength = maxValueEndOffset + maxValueStartOffset
+        #loop over all impulse responses for all chanels and
+        #calculate average response
+        result = DRCFileTool.WaveParams()
+        avgData = []
+        for currFileInfo in files:
+            params = DRCFileTool.LoadWaveFile(currFileInfo.fileName)
+            result = DRCFileTool.WaveParams(params.numChannels)
+            for chanel in range(0, params.numChannels):
+                if len(avgData) <= chanel:
+                    arr = [float(0.0)] * avgImpulseLength
+                    avgData.append(arr)
+                impulseStart = params.maxSampleValuePos[chanel] - \
+                        maxValueStartOffset + self.getSampleShift(
+                            currFileInfo.centerDistanceInCentimeter)
+                for index in range(0, avgImpulseLength):
+                    avgData[chanel][index] += float(params.data[chanel][
+                        impulseStart + index]) * \
+                            currFileInfo.weightingFactor
+        #write the avg result to the result
+        result.data = avgData
+        print(("numChans Avg :", params.numChannels, result.numChannels))
+        DRCFileTool.WriteWaveFile(result, impOutputFile)
         return impOutputFile
 
     def on_calculateDRC(self, param):
