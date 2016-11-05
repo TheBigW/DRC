@@ -487,7 +487,7 @@ class DRCDlg:
         return filterResultsDir
 
     def getSampleShift(self, distanceInCentimeter):
-        return 1.2849 * distanceInCentimeter
+        return int((1.2849 * distanceInCentimeter) + 0.5)
 
     def calculateAvgImpResponse(self, files):
         projectDir = os.path.dirname(os.path.abspath(files[0].fileName))
@@ -510,13 +510,18 @@ class DRCDlg:
                 impulseStart = params.maxSampleValuePos[chanel] - \
                         maxValueStartOffset + self.getSampleShift(
                             currFileInfo.centerDistanceInCentimeter)
+                print(("impulseStart:", impulseStart))
                 for index in range(0, avgImpulseLength):
                     avgData[chanel][index] += float(params.data[chanel][
-                        impulseStart + index]) * \
-                            currFileInfo.weightingFactor
+                        impulseStart + index] *
+                            currFileInfo.weightingFactor)
+                    #print(("avgData[chanel][index] : ",
+                    #    avgData[chanel][index],
+                    #    params.data[chanel][impulseStart + index]))
         #write the avg result to the result
         result.data = avgData
-        print(("numChans Avg :", params.numChannels, result.numChannels))
+        print(("numChans Avg :", params.numChannels, result.numChannels,
+            impOutputFile))
         DRCFileTool.WriteWaveFile(result, impOutputFile)
         return impOutputFile
 

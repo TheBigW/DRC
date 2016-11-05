@@ -149,7 +149,7 @@ def dumpSoundDataToFile(data, filename, writeAsText=False):
         theFile.close()
 
 
-def LoadRawFile(filename, params=WaveParams()):
+def LoadRawFile(filename, params):
     print(("LoadRawFile : ", filename, " numChanels : ", params.numChannels))
     filterFile = open(filename, "rb")
 
@@ -160,7 +160,7 @@ def LoadRawFile(filename, params=WaveParams()):
             floatSample = float(struct.unpack('f', readData)[0])
             readData = filterFile.read(params.sampleByteSize)
             if math.isnan(floatSample):
-                #print(("value is NaN : resetting to 0"))
+                #print(("value is: ", floatSample, "resetting to 0"))
                 floatSample = float(0.0)
             if params.maxSampleValue[chanel] < floatSample:
                 params.maxSampleValue[chanel] = floatSample

@@ -108,6 +108,9 @@ class ImpRespDlg():
             impRespInfo.centerDistanceInCentimeter = float(
                 fileControl.distanceEntry.get_text())
             impRespFiles.append(impRespInfo)
+            print(("impRespInfo:", impRespInfo.fileName,
+                impRespInfo.weightingFactor,
+                impRespInfo.centerDistanceInCentimeter))
         return impRespFiles
 
     def run(self):
