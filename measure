@@ -132,7 +132,7 @@ $LSCONV $REC_PCM_NAME ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM
 
 #convert the result to wav
 $ECHO -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav $IMPFILE
-$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav $SOXFMT $IMPFILE
+$SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav $IMPFILE
 
 $ECHO "Temporary file cleanup..."
 
