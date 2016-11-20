@@ -18,7 +18,7 @@ class MeasureQARetVal(Enum):
 
 class MeasureQADlg():
 
-    def __init__(self, parent, genSweepFile, measSweepFile, impRespFile,
+    def __init__(self, parent, genSweepFile, measSweepFile,
                  sweep_level):
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(
@@ -34,7 +34,6 @@ class MeasureQADlg():
         btnViewAudacity.connect("clicked", self.on_viewRecSweep)
         self.genSweepFile = genSweepFile
         self.measSweepFile = measSweepFile
-        self.setImpRespFileName(impRespFile)
 
     def evalData(self):
         audioParams = DRCFileTool.LoadAudioFile(self.genSweepFile, 1)
@@ -90,6 +89,7 @@ class MeasureQADlg():
 
     def run(self):
         print("running dlg...")
+        self.evalData()
         retVal = self.dlg.run()
         impRespFileName = self.uibuilder.get_object(
             "entryImpRespFileName").get_text()

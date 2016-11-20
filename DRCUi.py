@@ -385,8 +385,7 @@ class DRCDlg:
         raw_sweep_recorded_base_name = "/tmp/msrecsweep" +\
             strResultSuffix + ".pcm"
         evalDlg = MeasureQADlg(self.parent, raw_sweep_file_base_name,
-                           raw_sweep_recorded_base_name, "",
-                           self.sweep_level)
+                           raw_sweep_recorded_base_name, self.sweep_level)
         iterLoopMeasure = 0
         acquiredImpResFiles = []
         while(True):
