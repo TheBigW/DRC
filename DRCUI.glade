@@ -235,6 +235,7 @@
                       <object class="GtkEntry" id="entrySweepDuration">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
+                        <property name="tooltip_text" translatable="yes">duration of the sweep in seconds</property>
                         <property name="text" translatable="yes">20</property>
                       </object>
                       <packing>
@@ -501,6 +502,7 @@
                           <object class="GtkComboBoxText" id="comboboxFIRFilterMode">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="tooltip_text" translatable="yes">selects the FIR filter method. At the moment only the  GSTreamer filter is supported.</property>
                             <property name="active">0</property>
                             <property name="active_id">0</property>
                             <items>
@@ -794,6 +796,21 @@ Please select:</property>
                 <property name="position">1</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkButton" id="resetBtn">
+                <property name="label" translatable="yes">Reset</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">resets all settings to defaults</property>
+                <property name="xalign">0.52999997138977051</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -990,24 +1007,6 @@ NOTE: all factors shall summ up to 1</property>
                 <property name="left_attach">2</property>
                 <property name="top_attach">0</property>
               </packing>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
             </child>
           </object>
           <packing>
