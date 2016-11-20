@@ -1,8 +1,19 @@
 # -*- coding: utf-8 -*-
 from gi.repository import Gtk, RB
+import os
+from DRCConfig import DRCConfig
 import rb
 
 class DRCCfgDlg():
+
+    def applyConfig(self):
+        aCfg = DRCConfig()
+        if os.path.exists(aCfg.MicCalibrationFile):
+            self.filechooserbuttonMicCalFile.set_filename(
+                aCfg.MicCalibrationFile)
+        else:
+            self.filechooserbuttonMicCalFile.set_current_folder(
+                "/usr/share/drc/mic")
 
     def __init__(self, parent):
         self.uibuilder = Gtk.Builder()
@@ -15,8 +26,9 @@ class DRCCfgDlg():
         cancelBtn.connect("clicked", self.on_Cancel)
         self.filechooserbuttonMicCalFile = self.uibuilder.get_object(
             "filechooserbuttonMicCalFile")
-        self.filechooserbuttonMicCalFile.set_current_folder(
-            "/usr/share/drc/mic")
+        self.uibuilder.get_object(
+            "resetBtn").connect("clicked", self.on_ResetToDefaults)
+        self.applyConfig()
         self.comboboxtext_norm_method = self.uibuilder.get_object(
             "comboboxtext_norm_method")
         self.filechooserbuttonBaseCfg = self.uibuilder.get_object(
@@ -26,12 +38,22 @@ class DRCCfgDlg():
         self.filechooserbuttonBaseCfg.set_filename(
             "/usr/share/drc/config/44.1 kHz/erb-44.1.drc")
 
+    def on_ResetToDefaults(self, param):
+        self.filechooserbuttonMicCalFile.unselect_all()
+        self.filechooserbuttonMicCalFile.set_current_folder(
+            "/usr/share/drc/mic")
+
     def on_Ok(self, param):
         self.dlg.response(Gtk.ResponseType.OK)
+        aCfg = DRCConfig()
+        aCfg.MicCalibrationFile = self.filechooserbuttonMicCalFile.\
+            get_filename()
+        aCfg.save()
         self.dlg.set_visible(False)
 
     def on_Cancel(self, param):
         self.dlg.response(Gtk.ResponseType.CANCEL)
+        self.applyConfig()
         self.dlg.set_visible(False)
 
     def getMicCalibrationFile(self):

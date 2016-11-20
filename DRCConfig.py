@@ -38,6 +38,7 @@ class DRCConfig:
         self.playHardwareIndex = 0
         self.recHardwareIndex = 0
         self.recHardwareChannelIndex = 0
+        self.MicCalibrationFile = ""
         #0 - None
         #1 - GStreamerFIR
         #2 - BruteFIR
@@ -54,6 +55,7 @@ class DRCConfig:
             self.playHardwareIndex = cfg.playHardwareIndex
             self.recHardwareIndex = cfg.recHardwareIndex
             self.recHardwareChannelIndex = cfg.recHardwareChannelIndex
+            self.MicCalibrationFile = cfg.MicCalibrationFile
         except:
             print("no cfg existing -> create default")
             self.save()
