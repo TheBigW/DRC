@@ -111,10 +111,13 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
         except Exception as inst:
             print('filter not set', sys.exc_info()[0], type(inst), inst)
             pass
-        self.psc_id = self.shell_player.connect('playing-song-changed',
-                                                self.playing_song_changed)
-        # no possible workaround as somehow never reaches end of song :(
-        self.shell_player.connect('elapsed-changed', self.elapsed_changed)
+        aCfg = DRCConfig()
+        if aCfg.FIRFilterMode == 1:
+            #only for gst-FIR filter the skip-workaround is needed
+            self.psc_id = self.shell_player.connect('playing-song-changed',
+                self.playing_song_changed)
+            # no possible workaround as somehow never reaches end of song :(
+            self.shell_player.connect('elapsed-changed', self.elapsed_changed)
         # finally add UI
         self.add_ui(self, self.shell)
 
