@@ -85,8 +85,9 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
                     inst))
                 pass
             return hasMultiKernel
-        elif aCfg.FIRFilterMode == 1:
+        elif aCfg.FIRFilterMode == 2:
             #bruteFIF
+            #nothing ToDO
             self.remove_Filter()
         else:
             #None : disable all filtering

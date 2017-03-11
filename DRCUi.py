@@ -271,10 +271,8 @@ class DRCDlg:
             updateBruteFIRScript.append(self.getAlsaPlayHardwareString())
             updateBruteFIRScript.append(self.filechooserbtn.get_filename())
         print('create bruteFIRConfig and start/install bruteFIR')
-        p = subprocess.Popen(updateBruteFIRScript, 0, None, None,
-            subprocess.PIPE, subprocess.PIPE)
-        (out, err) = p.communicate()
-        print(("output from bruteFIR update script : " + str(out)))
+        updateBruteFIRCommand = "xterm -e " + " ".join(updateBruteFIRScript)
+        subprocess.call(updateBruteFIRCommand, shell=True)
 
     def on_applyFilterBruteFIR(self):
         self.updateBruteFIRCfg(True)
