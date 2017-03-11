@@ -6,13 +6,27 @@ RATE="44100"
 WAV_FILTER_FILE="$2"
 
 if [[ $# < 2 ]]; then
-	echo "disabling brutefir"
-	# TODO: kill brutefir process
-	# make ALSA_PLAY_HARDWARE teh default again
+	echo "disabling brutefir: setting pass-through filters"
+	# disable bruteFIR filter --> set -1 for all coeffs with telnet cfc command 
+	echo "cfc 0 -1;cfc 1 -1" | nc localhost 3000
+	# make ALSA_PLAY_HARDWARE the default again
 else
+	sudo pkill brutefir
 	echo "runnign sox to create bruteFIR pcm filters"
-	sox $WAV_FILTER_FILE -t raw -r $RATE -e float -b 32 -c 1 ~/filter_l.pcm remix 1
-	sox $WAV_FILTER_FILE -t raw -r $RATE -e float -b 32 -c 1 ~/filter_r.pcm remix 2
+	sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_l.pcm remix 1
+	sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_r.pcm remix 2
 
-	# TODO: create and update bruteFIR cfg if not existing, start brutefir as sudo, install if not existing, enable alsa loopback device etc....
+	#create and update bruteFIR cfg if not existing, start brutefir as sudo, install if not existing, enable alsa loopback device etc....
+	cp /usr/share/rhythmbox/plugins/DRC/.brutefir_config ~/
+	cp /usr/share/rhythmbox/plugins/DRC/.brutefir_defaults ~/
+	#TODO upate brutefir cfg with correct audio devices (loopback --> alsa out)
+
+	sudo apt-get install snd-aloop brutefir
+	#insert snd-aloop into snd-aloop
+	grep -q "snd-aloop" /etc/modules
+	if [ $? == 1 ]; then
+		sudo sh -c "echo \"snd-aloop\" >> /etc/modules"
+		sudo modprobe snd-aloop
+	fi
+	sudo brutefir ~/.brutefir_config &
 fi
