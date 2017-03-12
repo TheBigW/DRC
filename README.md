@@ -68,6 +68,9 @@ Even though DRC is a great tool to help with room accoustical problems it can't 
 <h3>Bass in small rooms</h3>
 Especially the bass response below 80Hz is critical as it is almost impossible to counter act with accoustical treatment. Speaker placement and/or usage of 2/4 subwoofers can help to minimize such problems. If needed I could (and will) describe in more detail how I achieved that in my listening room.
 
+<h4>usage on the raspberry PI</h4>
+Rhythmbox and room correction work on the raspberry PI! It can be insatlled on raspbian and the gstreamer as well as the brutefir FIR filtering works stable with no too significant CPU-load drain. Measuring on the PI with a USB audio device seems to be critical: on the PI it produces crackles for playback and measurement, so the filters and measurement shall be performed on a more powerfull machine. Playback works flawlessly (onfortunately not for USB audio devices ...)
+
 <h4>Known issues</h4>
 1) After measuring and filter calculation the filter can be directly applied. On some distributions this can cause audible issues and does not work. This can be worked around by just restarting rhythmbox.
 2) for some reasons RB is not able to play continously once the FIR filter is set. A workaround got introduced that resets each track once started. That causes small gaps which are audible once continous tracks with gapless transition are played. Working on it :).
