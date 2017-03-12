@@ -16,9 +16,12 @@ else
 	sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_l.pcm remix 1
 	sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_r.pcm remix 2
 
-	#create and update bruteFIR cfg if not existing, start brutefir as sudo, install if not existing, enable alsa loopback device etc....
-	cp /usr/share/rhythmbox/plugins/DRC/.brutefir_config ~/
-	cp /usr/share/rhythmbox/plugins/DRC/.brutefir_defaults ~/
+	#create and update bruteFIR cfg if not existing, install if not existing, enable alsa loopback device etc....
+	grep -q "filter_l.pcm" ~/.brutefir_config
+	if [ $? == 1 ]; then
+		cp /usr/share/rhythmbox/plugins/DRC/.brutefir_config ~/
+		cp /usr/share/rhythmbox/plugins/DRC/.brutefir_defaults ~/
+	fi
 	#TODO upate brutefir cfg with correct audio devices (loopback --> alsa out)
 
 	sudo apt-get install snd-aloop brutefir
@@ -28,5 +31,6 @@ else
 		sudo sh -c "echo \"snd-aloop\" >> /etc/modules"
 		sudo modprobe snd-aloop
 	fi
+	#start brutefir as sudo
 	sudo brutefir ~/.brutefir_config &
 fi
