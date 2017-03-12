@@ -1,21 +1,35 @@
+logic: "cli" { port: 3000; };
+
+coeff "DRC_L" {
+       filename: "/home/pi/filter_l.pcm";
+       format: "FLOAT_LE";     # file format
+};
+coeff "DRC_R" {
+       filename: "/home/pi/filter_r.pcm";
+       format: "FLOAT_LE";     # file format
+};
+
 input "left_in", "right_in" {
-        device: "alsa" { device: "hw:3,1"; ignore_xrun: true; };
+        device: "alsa" { device: "hw:0,1"; ignore_xrun: true; };
 };
 
 output "left_out", "right_out" {
         device: "alsa" { device: "hw:2,0"; ignore_xrun: true; };
 };
 
-filter "left" {
+filter "left_DRC" {
         from_inputs: "left_in";
         to_outputs: "left_out";
-        process: 0;
-   coeff: -1;
+	coeff:"DRC_L";
+	process: -1;
+	crossfade: false;
 };
 
-filter "right" {
+filter "right_DRC" {
         from_inputs: "right_in";
         to_outputs: "right_out";
-        process: 1;
-   coeff: -1;
+	coeff:"DRC_R";
+	process: -1;
+	crossfade: false;
 };
+
