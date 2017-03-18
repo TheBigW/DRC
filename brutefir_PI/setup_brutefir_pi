@@ -1,0 +1,14 @@
+#!/bin/bash
+
+PI_NAME="$2"
+PI_USER="$1"
+PI_SSH_NAME=$PI_USER@$PI_NAME
+
+scp ./setup_brutefir  $PI_SSH_NAME:setup_brutefir
+scp /usr/share/rhythmbox/plugins/DRC/.brutefir_config $PI_SSH_NAME:.brutefir_config
+scp /usr/share/rhythmbox/plugins/DRC/.brutefir_defaults $PI_SSH_NAME:.brutefir_defaults
+./updateFilters	$PI_USER $PI_NAME
+
+#ssh $PI_SSH_NAME /home/$PI_USER/setup_brutefir
+echo "login to the PI using ssh and exectute: ./setup_brutefir"
+ssh $PI_SSH_NAME

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+PI_NAME="$2"
+PI_USER="$1"
+PI_SSH_NAME=$PI_USER@$PI_NAME
+
+scp ~/filter_l.pcm  $PI_SSH_NAME:filter_l.pcm
+scp ~/filter_r.pcm  $PI_SSH_NAME:filter_r.pcm
+

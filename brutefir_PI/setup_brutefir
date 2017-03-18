@@ -1,0 +1,33 @@
+#!/bin/bash
+#snd-aloop
+sudo apt-get install brutefir alsa-utils -y;
+echo "runnign sox to create bruteFIR pcm filters"
+#sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_l.pcm remix 1
+#sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_r.pcm remix 2
+#create and update bruteFIR cfg if not existing, install if not existing, enable alsa loopback device etc....
+echo "perform filter update"
+grep -q "~" ~/.brutefir_config
+if [ $? == 1 ]; then
+	curr_user=${somebla-`whoami`}
+	sudo chown $curr_user ~/.brutefir_config
+	sudo chown $curr_user ~/.brutefir_defaults
+	#replace local path with absolute path
+	homeDir=~
+	sed -i -- 's_~/_'$homeDir'/_g' .brutefir_config
+fi
+#TODO upate brutefir cfg with correct audio devices (loopback --> alsa out)
+
+echo "adding snd-aloop to loaded modules"
+#insert snd-aloop into snd-aloop
+grep -q "snd-aloop" /etc/modules
+if [ $? == 1 ]; then
+	sudo sh -c "echo \"snd-aloop\" >> /etc/modules"
+	sudo modprobe snd-aloop
+fi
+
+#start brutefir automatic at startup
+grep -q "brutefir" /etc/rc.local
+if [ $? == 1 ]; then
+	sudo sed -i -- 's:exit 0:brutefir '$homeDir'/.brutefir_config\nexit 0:g' /etc/rc.local
+echo "reboot to edit .brutefir_config"
+
