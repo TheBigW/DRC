@@ -11,26 +11,36 @@ if [[ $# < 2 ]]; then
 	echo "cfc 0 -1;cfc 1 -1" | nc localhost 3000
 	# make ALSA_PLAY_HARDWARE the default again
 else
-	sudo pkill brutefir
 	echo "runnign sox to create bruteFIR pcm filters"
 	sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_l.pcm remix 1
 	sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_r.pcm remix 2
 
 	#create and update bruteFIR cfg if not existing, install if not existing, enable alsa loopback device etc....
-	grep -q "filter_l.pcm" ~/.brutefir_config
+	grep -q "~" ~/.brutefir_config
 	if [ $? == 1 ]; then
+		curr_user=${somebla-`whoami`}
 		cp /usr/share/rhythmbox/plugins/DRC/.brutefir_config ~/
 		cp /usr/share/rhythmbox/plugins/DRC/.brutefir_defaults ~/
+		sudo chown $curr_user ~/.brutefir_config
+		sudo chown $curr_user ~/.brutefir_defaults
+		#replace local path with absolute path
+		homeDir=~
+		sed -i -- 's_~/_'$homeDir'/_g' .brutefir_config
 	fi
 	#TODO upate brutefir cfg with correct audio devices (loopback --> alsa out)
-
-	sudo apt-get install snd-aloop brutefir
+	
 	#insert snd-aloop into snd-aloop
 	grep -q "snd-aloop" /etc/modules
 	if [ $? == 1 ]; then
 		sudo sh -c "echo \"snd-aloop\" >> /etc/modules"
 		sudo modprobe snd-aloop
 	fi
+	grep -q "brutefir" /etc/rc.local
+	if [ $? == 1 ]; then
+		sudo sed -i -- 's:exit 0:brutefir '$homeDir'/.brutefir_config\nexit 0:g' /etc/rc.local
+	sudo apt-get install snd-aloop brutefir
+	sudo pkill brutefir
 	#start brutefir as sudo
 	sudo brutefir ~/.brutefir_config &
+	#start brutefir automatic at startup	
 fi
