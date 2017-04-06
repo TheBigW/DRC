@@ -1,11 +1,11 @@
 logic: "cli" { port: 3000; };
 
 coeff "DRC_L" {
-       filename: "/home/pi/filter_l.pcm";
+       filename: "~/filter_1.pcm";
        format: "FLOAT_LE";     # file format
 };
 coeff "DRC_R" {
-       filename: "/home/pi/filter_r.pcm";
+       filename: "~/filter_2.pcm";
        format: "FLOAT_LE";     # file format
 };
 
@@ -14,7 +14,8 @@ input "left_in", "right_in" {
 };
 
 output "left_out", "right_out" {
-        device: "alsa" { device: "hw:2,0"; ignore_xrun: true; };
+        device: "alsa" { device: "hw:1,0"; ignore_xrun: true; };
+	sample: "S32_LE";
 };
 
 filter "left_DRC" {
