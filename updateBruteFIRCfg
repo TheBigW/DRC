@@ -11,36 +11,43 @@ if [[ $# < 2 ]]; then
 	echo "cfc 0 -1;cfc 1 -1" | nc localhost 3000
 	# make ALSA_PLAY_HARDWARE the default again
 else
-	echo "runnign sox to create bruteFIR pcm filters"
-	sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_l.pcm remix 1
-	sox $WAV_FILTER_FILE -t raw -c 1 ~/filter_r.pcm remix 2
+	#output file parameters with soxi and parse number of channels: create one pcm file per channel
+	SOXI_RESULT="$(soxi $WAV_FILTER_FILE)"
+	regex="Channels.*([0-9])"
+	[[ $SOXI_RESULT =~ $regex ]]
+	NUM_WAV_CHANNELS=${BASH_REMATCH[1]}
+	echo "runnign sox to create bruteFIR pcm filters"	
+	for ((i=1;i<=NUM_WAV_CHANNELS;i++));
+	do
+		CURRENT_FILE=~/filter_$i.pcm
+		sox $WAV_FILTER_FILE -t raw -c 1 $CURRENT_FILE remix $i
+	done
 
 	#create and update bruteFIR cfg if not existing, install if not existing, enable alsa loopback device etc....
-	grep -q "~" ~/.brutefir_config
-	if [ $? == 1 ]; then
-		curr_user=${somebla-`whoami`}
-		cp /usr/share/rhythmbox/plugins/DRC/.brutefir_config ~/
-		cp /usr/share/rhythmbox/plugins/DRC/.brutefir_defaults ~/
-		sudo chown $curr_user ~/.brutefir_config
-		sudo chown $curr_user ~/.brutefir_defaults
-		#replace local path with absolute path
-		homeDir=~
-		sed -i -- 's_~/_'$homeDir'/_g' .brutefir_config
-	fi
+	#grep -q "~" ~/.brutefir_config
+	#if [ $? == 1 ]; then
+	#	curr_user=${somebla-`whoami`}
+	#	cp /usr/share/rhythmbox/plugins/DRC/.brutefir_config ~/
+	#	cp /usr/share/rhythmbox/plugins/DRC/.brutefir_defaults ~/
+	#	sudo chown $curr_user ~/.brutefir_config
+	#	sudo chown $curr_user ~/.brutefir_defaults
+	#	#replace local path with absolute path
+	#	homeDir=~
+	#	sed -i -- 's_~/_'$homeDir'/_g' .brutefir_config
+	#fi
 	#TODO upate brutefir cfg with correct audio devices (loopback --> alsa out)
 	
 	#insert snd-aloop into snd-aloop
-	grep -q "snd-aloop" /etc/modules
-	if [ $? == 1 ]; then
-		sudo sh -c "echo \"snd-aloop\" >> /etc/modules"
-		sudo modprobe snd-aloop
-	fi
-	grep -q "brutefir" /etc/rc.local
-	if [ $? == 1 ]; then
-		sudo sed -i -- 's:exit 0:brutefir '$homeDir'/.brutefir_config\nexit 0:g' /etc/rc.local
-	sudo apt-get install snd-aloop brutefir
-	sudo pkill brutefir
+	#grep -q "snd-aloop" /etc/modules
+	#if [ $? == 1 ]; then
+	#	sudo sh -c "echo \"snd-aloop\" >> /etc/modules"
+	#	sudo modprobe snd-aloop
+	#fi
+	#grep -q "brutefir" /etc/rc.local
+	#if [ $? == 1 ]; then
+    #	sudo sed -i -- 's:exit 0:brutefir '$homeDir'/.brutefir_config\nexit 0:g' /etc/rc.local
+	#sudo apt-get install snd-aloop brutefir
+	#sudo pkill brutefir
 	#start brutefir as sudo
-	sudo brutefir ~/.brutefir_config &
-	#start brutefir automatic at startup	
+	#sudo brutefir ~/.brutefir_config &
 fi
