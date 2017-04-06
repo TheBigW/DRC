@@ -135,6 +135,9 @@ class DRCDlg:
             "checkbutton_2ChannelMeasure")
         self.exec_2ChannelMeasure.set_sensitive(True)
 
+        self.spinbutton_NumChannels = self.uibuilder.get_object(
+            "spinbutton_NumChannels")
+
         self.notebook = self.uibuilder.get_object("notebook1")
         self.volumeUpdateBlocked = False
         self.mode = None
@@ -377,11 +380,8 @@ class DRCDlg:
                         str(self.entrySweepDuration.get_text())
         os.makedirs(strResultsDir)
         strResultSuffix = ""
-        if self.exec_2ChannelMeasure.get_active():
-            strResultSuffix = "l"
         raw_sweep_file_base_name = "/tmp/msrawsweep.pcm"
-        raw_sweep_recorded_base_name = "/tmp/msrecsweep" +\
-            strResultSuffix + ".pcm"
+        raw_sweep_recorded_base_name = "/tmp/msrecsweep0.pcm"
         evalDlg = MeasureQADlg(self.parent, raw_sweep_file_base_name,
                            raw_sweep_recorded_base_name, self.sweep_level)
         iterLoopMeasure = 0
@@ -397,7 +397,8 @@ class DRCDlg:
                        str(self.entrySweepDuration.get_text()),
                        impOutputFile,
                        self.comboInputChanel.get_active_text(),
-                       str(self.exec_2ChannelMeasure.get_active())]
+                       str(self.exec_2ChannelMeasure.get_active()),
+                       str(int(self.spinbutton_NumChannels.get_value()))]
             p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE,
                              subprocess.PIPE)
             (out, err) = p.communicate()

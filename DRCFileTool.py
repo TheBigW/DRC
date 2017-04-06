@@ -23,7 +23,7 @@ from array import array
 
 class WaveParams:
     def __init__(self, numChannels=None):
-        if numChannels is     None:
+        if numChannels is None:
             self.numChannels = 2
         else:
             self.numChannels = numChannels
@@ -97,7 +97,7 @@ def PrintWavHeader(strWAVFile):
         fileIn.seek(nextChunkLocation)
         bufHeader = fileIn.read(8)
         if bufHeader[0:4].decode("utf-8") == "data":
-            print("data section found at : ", fileIn.tell())
+            print(("data section found at : ", fileIn.tell()))
             dataChunkLocation = nextChunkLocation
         # endif
         nextChunkLocation += (8 + struct.unpack('<L', bufHeader[4:8])[0])
