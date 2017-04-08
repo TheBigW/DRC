@@ -36,11 +36,11 @@ $ECHO "of any kind. Please read the file "COPYING" for details."
 $ECHO 
 
 # Command line check
-if [[ $# < 11 ]]; then
+if [[ $# < 12 ]]; then
  $ECHO "Usage:"
- $ECHO " measure bits rate startf endf lslen lssil indev outdev impfile"
+ $ECHO " measure bits rate startf endf lslen lssil indev outdev impfile amplitude recording_channel overall_output_channels current output channel"
  $ECHO
- $ECHO " bits: measuring bits (16 or 24)"
+ $ECHO " bits: measuring bits (16, 24 or 32)"
  $ECHO " rate: sample rate"
  $ECHO " startf: sweep start frequency in Hz"
  $ECHO " endf: sweep end frequency in Hz"
@@ -50,7 +50,11 @@ if [[ $# < 11 ]]; then
  $ECHO " outdev: ALSA output device"
  $ECHO " amplitude of sweep file 0.1 .. 1" 
  $ECHO " recording chanel to use (device dependend 1..n)" 
- $ECHO "example: measure 16 44100 5 21000 45 2 plughw plughw impulse.pcm use_ref"
+ $ECHO " overall number of audio channels (device dependend 2..n)"
+ $ECHO " overall number of audio channels (current audio channel to measure in the range of overall audio channels)"
+ $ECHO
+ $ECHO "example for a typical stereo measurement:"
+ $ECHO "example: measure 32 44100 5 21000 45 2 hw:1,0 hw:1,0 impulse.pcm use_ref 1 2 0"
  $ECHO
  exit 0
 fi 
@@ -76,13 +80,17 @@ SOXFMT="-e signed-integer -b 32"
 # Generate the log sweep
 $ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $REC_CHANNEL $OVERALL_CHANNELS $CURRENT_CHANNEL
 
+PLAY_SWEEP=${TMP}/msplaysweep.wav
+
 if [ $OVERALL_CHANNELS == 2 ]; then
-	PLAY_PROGRAM="aplay"
+	PLAY_COMMAND="aplay -D $OUTDEV $PLAY_SWEEP"
 else
-	PLAY_PROGRAM="mplayer"
+	MPLAYER_ALSA_DEV=result=${OUTDEV//:/=}
+	PLAY_COMMAND="mplayer -ao alsa:device=$MPLAYER_ALSA_DEV -ac hwac3"
+	#PLAY_COMMAND="xbmc-send -a "PlayMedia("$PLAY_SWEEP")""
 fi
 
-echo "PLAY_PROGRAM: "$PLAY_PROGRAM
+echo "PLAY_COMMAND: "$PLAY_COMMAND
 
 # determine channel to play the sweep to
 if [ -z "$CURRENT_CHANNEL" ]; then
@@ -107,7 +115,6 @@ $GLSWEEP $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/ms
 
 # Convert to WAV file
 $ECHO "Converting sweep to play format..."
-PLAY_SWEEP=${TMP}/msplaysweep.wav
 $SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -c $OVERALL_CHANNELS $SOXFMT $PLAY_SWEEP $PLAY_SWEEP_PARAM
 
 #encode the sweep to AC3 if more than 2 channels
@@ -133,7 +140,7 @@ REC_WAV_NAME=${TMP}/msrecsweep${CURRENT_CHANNEL}.wav
 REC_PCM_NAME=${TMP}/msrecsweep${CURRENT_CHANNEL}.pcm
 if [ $TEST_MODE == true ]; then
 	$ECHO "simulating record!!!\n"
-	$PLAY_PROGRAM -D $OUTDEV ${TMP}/msplaysweep.wav
+	$PLAY_COMMAND
 	i=10
 	LOOP_AMPLITUDE=$(bc <<< "scale=2;$AMPLITUDE +($i/10)")
 	SIM_AMPLITUDE=$LOOP_AMPLITUDE
@@ -142,7 +149,7 @@ if [ $TEST_MODE == true ]; then
 	$GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $REC_PCM_NAME ${TMP}/dummy_inverse.pcm
 	$SOX -t raw -r $RATE -c 1 -e float -b32 $REC_PCM_NAME -t wav $SOXFMT $REC_WAV_NAME
 else
-	$PLAY_PROGRAM -D $OUTDEV $PLAY_SWEEP &
+	$PLAY_COMMAND &
 	$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c 2 -d $RLEN $REC_WAV_NAME
 fi
 
