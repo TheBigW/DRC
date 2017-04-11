@@ -19,6 +19,7 @@ import sys
 import re
 import datetime
 import subprocess
+from shutil import copyfile
 
 
 from gi.repository import Gtk, RB
@@ -525,6 +526,7 @@ class DRCDlg:
         #get number of channels from impRespFiles and loop over
         numChannels = DRCFileTool.getNumChannels(impRespFiles[0].fileName)
         soxMergeCall = ["sox", "-M"]
+        channelFilterFile = ""
         for currChannel in range(0, numChannels):
             channelFilterFile = "/tmp/filter" + str(currChannel) + ".wav"
             soxMergeCall.append(channelFilterFile)
@@ -552,6 +554,7 @@ class DRCDlg:
                 if self.porcCfgDlg.getMixedPhaseEnabled():
                     drcScript.append("--mixed")
                 drcScript.append(targetCurveFileName)
+                copyfile(channelFilterFile, filterResultFile)
             # execute measure script to generate filters
             # last 2 parameters for all scripts allways impulse response and
             # result filter
@@ -563,11 +566,14 @@ class DRCDlg:
                                  subprocess.PIPE)
             (out, err) = p.communicate()
             print(("output from filter calculate script : " + str(out)))
+            if drcMethod == "PORC":
+                break
         #use sox to merge all results to one filtefile
-        soxMergeCall.append(filterResultFile)
-        p = subprocess.Popen(soxMergeCall, 0, None, None, subprocess.PIPE,
-            subprocess.PIPE)
-        print(("output from sox filter merge : " + str(out)))
+        if drcMethod == "DRC":
+            soxMergeCall.append(filterResultFile)
+            p = subprocess.Popen(soxMergeCall, 0, None, None, subprocess.PIPE,
+                subprocess.PIPE)
+            print(("output from sox filter merge : " + str(out)))
         self.filechooserbtn.set_filename(filterResultFile)
         self.set_filter()
         self.notebook.next_page()
