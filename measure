@@ -10,14 +10,13 @@
 # Useful programs
 ECHO="echo"
 RM="rm"
-MV="mv"
 GLSWEEP="glsweep"
 SOX="sox"
 LSCONV="lsconv"
 ARECORD="arecord"
 SYNC="sync"
 SLEEP="sleep"
-#TEST_MODE=true
+TEST_MODE=true
 
 # Default parameters
 TMP="/tmp"
@@ -54,7 +53,7 @@ if [[ $# < 12 ]]; then
  $ECHO " overall number of audio channels (current audio channel to measure in the range of overall audio channels)"
  $ECHO
  $ECHO "example for a typical stereo measurement:"
- $ECHO "example: measure 32 44100 5 21000 45 2 hw:1,0 hw:1,0 impulse.pcm use_ref 1 2 0"
+ $ECHO "example: measure 32 44100 5 21000 45 2 hw:1,0 hw:1,0 impulse.pcm 0.5 2 0"
  $ECHO
  exit 0
 fi 
@@ -82,12 +81,13 @@ $ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $
 
 PLAY_SWEEP=${TMP}/msplaysweep.wav
 
-if [ $OVERALL_CHANNELS == 2 ]; then
-	PLAY_COMMAND="aplay -D $OUTDEV $PLAY_SWEEP"
-else
+if test $OVERALL_CHANNELS -gt 2
+ then
 	MPLAYER_ALSA_DEV=result=${OUTDEV//:/=}
 	PLAY_COMMAND="mplayer -ao alsa:device=$MPLAYER_ALSA_DEV -ac hwac3"
 	#PLAY_COMMAND="xbmc-send -a "PlayMedia("$PLAY_SWEEP")""
+else
+	PLAY_COMMAND="aplay -D $OUTDEV $PLAY_SWEEP"
 fi
 
 echo "PLAY_COMMAND: "$PLAY_COMMAND
@@ -138,19 +138,17 @@ $SLEEP 1
 RLEN=$(( $LSLEN + $LSSIL * 2 ))
 REC_WAV_NAME=${TMP}/msrecsweep${CURRENT_CHANNEL}.wav
 REC_PCM_NAME=${TMP}/msrecsweep${CURRENT_CHANNEL}.pcm
-if [ $TEST_MODE == true ]; then
-	$ECHO "simulating record!!!\n"
-	$PLAY_COMMAND
-	i=10
-	LOOP_AMPLITUDE=$(bc <<< "scale=2;$AMPLITUDE +($i/10)")
-	SIM_AMPLITUDE=$LOOP_AMPLITUDE
-	$ECHO "Sim Amplitude: "$SIM_AMPLITUDE" to : "$REC_WAV_NAME" and : "$REC_PCM_NAME
-	$ECHO $GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $REC_PCM_NAME ${TMP}/dummy_inverse.pcm
-	$GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $REC_PCM_NAME ${TMP}/dummy_inverse.pcm
-	$SOX -t raw -r $RATE -c 1 -e float -b32 $REC_PCM_NAME -t wav $SOXFMT $REC_WAV_NAME
-else
+if [ -z "$TEST_MODE" ]; then
 	$PLAY_COMMAND &
 	$ARECORD -D $INDEV -t wav -r $RATE -f $ARECORDFMT -c 2 -d $RLEN $REC_WAV_NAME
+else
+	$ECHO "simulating record!!!\n"
+	$PLAY_COMMAND
+	SIM_AMPLITUDE=$(bc <<< "scale=2;$AMPLITUDE +($CURRENT_CHANNEL/10)")
+	$ECHO "Sim Amplitude: "$SIM_AMPLITUDE" to : "$REC_WAV_NAME" and : "$REC_PCM_NAME
+	$ECHO "glsweep measure simulation : " $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $REC_PCM_NAME ${TMP}/sim_inverse.pcm
+	$GLSWEEP $RATE $SIM_AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT $REC_PCM_NAME ${TMP}/sim_inverse.pcm
+	$SOX -t raw -r $RATE -c 1 -e float -b32 $REC_PCM_NAME -t wav $SOXFMT $REC_WAV_NAME	
 fi
 
 $ECHO "recorded sweep conversion"
@@ -165,9 +163,3 @@ $LSCONV $REC_PCM_NAME ${TMP}/msinverse.pcm $IMP_FILE_PCM $REF_PARAM
 #convert the result to wav
 $ECHO -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav $IMPFILE
 $SOX -t raw -r $RATE -c 1 -e float -b32 $IMP_FILE_PCM -t wav $IMPFILE
-
-$ECHO "Temporary file cleanup..."
-
-# cleanup
-#$RM ${TMP}/*.pcm
-#$RM ${TMP}/*.wav
