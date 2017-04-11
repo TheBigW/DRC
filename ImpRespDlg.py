@@ -9,7 +9,6 @@ class ImpResLine():
 
     def __init__(self, grid, measureResultsDir, filename, noOfControls):
         super(ImpResLine, self).__init__()
-        self.grid = grid
         self.fileChooser = Gtk.FileChooserButton()
         self.fileChooser.set_current_folder(
             measureResultsDir)
@@ -28,8 +27,17 @@ class ImpResLine():
         grid.attach_next_to(self.distanceEntry, self.weightEntry,
             Gtk.PositionType.RIGHT, 2, 1)
         grid.show_all()
-        grid.insert_row(noOfControls)
+        self.rowPosition = noOfControls
+        grid.insert_row(self.rowPosition)
 
+    def remove(self, grid):
+        grid.remove(self.fileChooser)
+        self.fileChooser = None
+        grid.remove(self.weightEntry)
+        self.weightEntry = None
+        grid.remove(self.distanceEntry)
+        self.distanceEntry = None
+        grid.remove_row(self.rowPosition)
 
 class ImpRespFileInfo():
 
@@ -68,9 +76,8 @@ class ImpRespDlg():
         self.setFiles(wavFiles)
 
     def on_RemoveFile(self, button):
-        numFiles = len(self.fileControlList)
+        self.fileControlList[-1].remove(self.elementGrid)
         del self.fileControlList[-1]
-        self.elementGrid.remove_row(numFiles)
 
     def on_AddFiles(self, fileChooserBtn):
         impRespFilesDlg = Gtk.FileChooserDialog("Please choose a file",
@@ -84,8 +91,14 @@ class ImpRespDlg():
         self.setFiles(allFiles)
         impRespFilesDlg.destroy()
 
+    def removeAll(self):
+        for control in self.fileControlList:
+            control.remove(self.elementGrid)
+        self.fileControlList = []
+
     def setFiles(self, fileList):
         numFiles = len(fileList)
+        self.fileControlList = []
         for impRespFile in fileList:
             impRespL = ImpResLine(
                 self.elementGrid, self.mesureResultsDir,

@@ -130,6 +130,11 @@ def PrintWavHeader(strWAVFile):
     return params
 
 
+def getNumChannels(filename):
+    waveParams = PrintWavHeader(filename)
+    return waveParams.numChannels
+
+
 def dumpSoundDataToFile(data, filename, writeAsText=False):
     f = open(
         filename,
@@ -244,3 +249,10 @@ def LoadAudioFile(filename, numChannels):
         params = WaveParams(numChannels)
         return LoadRawFile(filename, params)
 
+
+def LoadAudioFileStereoChannels(filename, numChannels, numChannelsToLoad):
+    data = LoadAudioFile(filename, numChannels)
+    if data.numChannels > 2:
+        #TODO extract first 2 channels and re-package
+        print(("work in progress ... "))
+    return data

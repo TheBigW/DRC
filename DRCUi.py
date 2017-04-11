@@ -26,6 +26,7 @@ from gi.repository import Gtk, RB
 from DRCConfig import DRCConfig
 from MeasureQADlg import MeasureQADlg
 from MeasureQADlg import MeasureQARetVal
+from TargetCurveDlg import TargetCurveDlg
 from ChannelSelDlg import ChanelSelDlg
 from PORCCfgDlg import PORCCfgDlg
 from DRCCfgDlg import DRCCfgDlg
@@ -35,7 +36,6 @@ import alsaTools
 
 import DRCFileTool
 import rb
-from DRCTargetCurveUI import EQControl
 
 
 class DRCDlg:
@@ -110,12 +110,7 @@ class DRCDlg:
 
         self.buttonSetImpRespFile.connect("clicked", self.on_setImpRespFiles)
 
-        self.filechooserbuttonTargetCurve = self.uibuilder.get_object(
-            "filechooserbuttonTargetCurve")
-        self.filechooserbuttonTargetCurve.set_current_folder(
-            "/usr/share/drc/target/44.1 kHz")
         self.comboDRC = self.uibuilder.get_object("combo_drc_type")
-        # TODO: check availibility of PORC & DRC and fill combo accordingly
         self.cfgDRCButton = self.uibuilder.get_object("cfgDRCButton")
         self.cfgDRCButton.connect("clicked", self.on_cfgDRC)
         self.comboDRC.append_text("DRC")
@@ -127,9 +122,7 @@ class DRCDlg:
         self.porcCfgDlg = PORCCfgDlg(self.parent)
         self.channelSelDlg = ChanelSelDlg(self.parent)
         self.impRespDlg = ImpRespDlg(self.parent, self.getMeasureResultsDir())
-
-        self.uibuilder.get_object("buttonEditTargetCurve").connect("clicked",
-                                                self.on_editTargetCurve)
+        self.targetCurveDlg = TargetCurveDlg(self.parent)
 
         self.exec_2ChannelMeasure = self.uibuilder.get_object(
             "checkbutton_2ChannelMeasure")
@@ -149,15 +142,16 @@ class DRCDlg:
         self.comboboxFIRFilterMode.connect("changed",
             self.on_FIRFilterModeChanged)
 
+        self.uibuilder.get_object("buttonTargetCurve").connect("clicked",
+            self.on_EditTargetCurve)
+
     def __init__(self, parent):
         self.parent = parent
 
-    def on_editTargetCurve(self, widget):
-        editDlg = EQControl(self.filechooserbuttonTargetCurve.get_filename(),
-                            self.parent)
-        if editDlg.run() == Gtk.ResponseType.OK:
-            self.filechooserbuttonTargetCurve.set_filename(
-                editDlg.getTargetCurveFile())
+    def on_EditTargetCurve(self, button):
+        impRespFile = self.impRespDlg.getImpRespFiles()[0].fileName
+        self.targetCurveDlg.setImpRespFile(impRespFile)
+        self.targetCurveDlg.run()
 
     def startInputVolumeUpdate(self, channel=None):
         if channel is None:
@@ -217,8 +211,6 @@ class DRCDlg:
         drcMethod = combo.get_active_text()
         if drcMethod == "DRC":
             self.cfgDRCButton.set_label("configure DRC")
-            self.filechooserbuttonTargetCurve.set_filename(
-                "/usr/share/drc/target/44.1 kHz/bk-44.1.txt")
         else:
             self.cfgDRCButton.set_label("configure PORC")
             drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
@@ -232,7 +224,6 @@ class DRCDlg:
                 porcInstCommand = "xterm -e " + installScript + " " + \
                                   pluginPath
                 subprocess.call(porcInstCommand, shell=True)
-            self.filechooserbuttonTargetCurve.set_filename()
 
     def slider_changed(self, hscale):
         self.sweep_level = hscale.get_value()
@@ -379,7 +370,6 @@ class DRCDlg:
                         datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + \
                         str(self.entrySweepDuration.get_text())
         os.makedirs(strResultsDir)
-        strResultSuffix = ""
         raw_sweep_file_base_name = "/tmp/msrawsweep.pcm"
         raw_sweep_recorded_base_name = "/tmp/msrecsweep0.pcm"
         evalDlg = MeasureQADlg(self.parent, raw_sweep_file_base_name,
@@ -413,6 +403,7 @@ class DRCDlg:
             acquiredImpResFiles.append(evalDlg.impRespFile)
             if evalDlg.Result == MeasureQARetVal.Done:
                 break
+        self.impRespDlg.removeAll()
         self.impRespDlg.setFiles(acquiredImpResFiles)
         self.notebook.next_page()
 
@@ -438,7 +429,7 @@ class DRCDlg:
             os.makedirs(tmpCfgDir)
         return tmpCfgDir
 
-    def prepareDRC(self, impRespFile, filterResultFile):
+    def prepareDRC(self, impRespFile, filterResultFile, targetCurveFile):
         drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
         drcCfgFileName = os.path.basename(self.drcCfgDlg.getBaseCfg())
         print(("drcCfgBaseName : " + drcCfgFileName))
@@ -453,7 +444,7 @@ class DRCDlg:
         normMethod = self.drcCfgDlg.getNormMethod()
         changeCfgFileArray = [["BCInFile", impRespFile],
                               ["PSPointsFile",
-                            self.filechooserbuttonTargetCurve.get_filename()],
+                                targetCurveFile],
                               ["PSNormType", normMethod]
                              ]
         if micCalFile is not None:
@@ -531,36 +522,52 @@ class DRCDlg:
             drcMethod) + datetime.datetime.now().strftime(
             "%Y%m%d%H%M%S") + ".wav"
         impRespFiles = self.impRespDlg.getImpRespFiles()
-        #go through all impRespFiles, average them and pass the
-        #result to the impRespFile
-        avgImpRespFile = self.calculateAvgImpResponse(impRespFiles)
-        if avgImpRespFile is None:
-            self.showMsgBox("no file loaded")
-            return
-        if drcMethod == "DRC":
-            drcScript = self.prepareDRC(avgImpRespFile, filterResultFile)
-        elif drcMethod == "PORC":
-            drcScript = [rb.find_plugin_file(self.parent, "calcFilterPORC")]
-            porcCommand = pluginPath + "/porc/porc.py"
-            if not os.path.isfile(porcCommand):
-                self.showMsgBox(
-                    "porc.py not found. Please download from github and "
-                    "install in the DRC plugin subfolder 'porc'")
+        #get number of channels from impRespFiles and loop over
+        numChannels = DRCFileTool.getNumChannels(impRespFiles[0].fileName)
+        soxMergeCall = ["sox", "-M"]
+        for currChannel in range(0, numChannels):
+            channelFilterFile = "/tmp/filter" + str(currChannel) + ".wav"
+            soxMergeCall.append(channelFilterFile)
+            #go through all impRespFiles, average them and pass the
+            #result to the impRespFile
+            avgImpRespFile = self.calculateAvgImpResponse(impRespFiles)
+            #get target curve filename per channel
+            targetCurveFileName = self.targetCurveDlg.getTargetCurveFileName(
+                currChannel)
+            if avgImpRespFile is None:
+                self.showMsgBox("no file loaded")
                 return
-            drcScript.append(porcCommand)
-            if self.porcCfgDlg.getMixedPhaseEnabled():
-                drcScript.append("--mixed")
-            drcScript.append(self.filechooserbuttonTargetCurve.get_filename())
-        # execute measure script to generate filters
-        # last 2 parameters for all scripts allways impulse response and
-        # result filter
-        drcScript.append(avgImpRespFile)
-        drcScript.append(filterResultFile)
-        print(("drc command line: " + str(drcScript)))
-        p = subprocess.Popen(drcScript, 0, None, None, subprocess.PIPE,
-                             subprocess.PIPE)
-        (out, err) = p.communicate()
-        print((")output from filter calculate script : " + str(out)))
+            if drcMethod == "DRC":
+                drcScript = self.prepareDRC(avgImpRespFile, channelFilterFile,
+                    targetCurveFileName)
+            elif drcMethod == "PORC":
+                drcScript = [rb.find_plugin_file(self.parent, "calcFilterPORC")]
+                porcCommand = pluginPath + "/porc/porc.py"
+                if not os.path.isfile(porcCommand):
+                    self.showMsgBox(
+                        "porc.py not found. Please download from github and "
+                        "install in the DRC plugin subfolder 'porc'")
+                    return
+                drcScript.append(porcCommand)
+                if self.porcCfgDlg.getMixedPhaseEnabled():
+                    drcScript.append("--mixed")
+                drcScript.append(targetCurveFileName)
+            # execute measure script to generate filters
+            # last 2 parameters for all scripts allways impulse response and
+            # result filter
+            drcScript.append(avgImpRespFile)
+            drcScript.append(channelFilterFile)
+            drcScript.append(str(currChannel))
+            print(("drc command line: " + str(drcScript)))
+            p = subprocess.Popen(drcScript, 0, None, None, subprocess.PIPE,
+                                 subprocess.PIPE)
+            (out, err) = p.communicate()
+            print(("output from filter calculate script : " + str(out)))
+        #use sox to merge all results to one filtefile
+        soxMergeCall.append(filterResultFile)
+        p = subprocess.Popen(soxMergeCall, 0, None, None, subprocess.PIPE,
+            subprocess.PIPE)
+        print(("output from sox filter merge : " + str(out)))
         self.filechooserbtn.set_filename(filterResultFile)
         self.set_filter()
         self.notebook.next_page()

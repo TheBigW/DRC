@@ -70,8 +70,11 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             try:
                 source = self.shell_player.get_playing_source()
                 self.shell_player.pause()
-                audioParams = DRCFileTool.LoadAudioFile(filterFileName,
-                                                         aCfg.numFilterChanels)
+                #in case of a multichannel kernel with > 2 channels only
+                #the first 2 channels shall be used for gstreamer filtering
+                #as gstreamer FIR only supports at maximum 2 channels
+                audioParams = DRCFileTool.LoadAudioFileStereoChannels(
+                    filterFileName, aCfg.numFilterChanels)
                 filter_array = audioParams.data
                 # pass the filter data to the fir filter
                 num_filter_coeff = len(filter_array)
@@ -109,7 +112,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             self.hasMultiKernel = self.updateFilter()
             # print( str(dir( self.shell.props)) )
         except Exception as inst:
-            print('filter not set', sys.exc_info()[0], type(inst), inst)
+            print(('filter not set', sys.exc_info()[0], type(inst), inst))
             pass
         aCfg = DRCConfig()
         if aCfg.FIRFilterMode == 1:
@@ -141,7 +144,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
                 print('done setting filter')
             self.filterSet = True
         except Exception as inst:
-            print('unexpected exception', sys.exc_info()[0], type(inst), inst)
+            print(('unexpected exception', sys.exc_info()[0], type(inst), inst))
             pass
 
     def remove_Filter(self):
