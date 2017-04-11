@@ -16,6 +16,11 @@ SEPARATE_CHANNEL="$9"
 NUM_CHANNELS="${10}"
 PLUGIN_PATH=`dirname $0`
 
+$ECHO "Temporary file cleanup of previous measurment..."
+$RM ${TMP}/*.pcm
+$RM ${TMP}/*.wav
+
+
 messurescript=${PLUGIN_PATH}"/measure"
 echo "\n\n executing" $messurescript $BIT_DEPTH $SAMPLE_RATE $START_FREQ $END_FREQ $DURATION $SILENCE_LENGTH $INPUT_HW $OUTPUT_HW ${IMP_OUT_FILE} $AMPLITUDE $REC_CHANNEL $SEPARATE_CHANNEL $NUM_CHANNELS"\n\n"
 
