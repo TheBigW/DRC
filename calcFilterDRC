@@ -4,7 +4,7 @@
 DRC_CFG_FILE="${1}"
 IMPULSE_FILE="$2"
 FILTER_FILE="$3"
-NUM_CHANNELS="$4"
+CURR_CHANNEL="$4"
 RATE="44100"
 # defaults
 TMP="/tmp"
@@ -12,45 +12,19 @@ SOX="sox"
 
 filename=$(basename "$IMPULSE_FILE")
 extension="${filename##*.}"
+PCM_IMP_FILENAME=${TMP}/impulse_chanel$CURR_CHANNEL.pcm
 echo "extension : " $extension
 if [ "$extension" == "wav" ]; then
- #get number of chanels from the wavefile
- #TODO : test on german installation  whether those matches are language independent 
- echo "reading wave properties"
- read NUM_CHANNELS <<< $(soxi "${IMPULSE_FILE}" | awk '/Channels/ { print $3 }')
- read RATE <<< $(soxi "${IMPULSE_FILE}" | awk '/Sample Rate/ { print $4 }')
- echo "done reading wave properties: " $NUM_CHANNELS", " $RATE
+	REMIX_PARAM="remix "$((CURR_CHANNEL + 1))
+	echo "wavefile -> converting to pcm for DRC with remix param : "$REMIX_PARAM
+	$SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
 else
- #convert to wave to have a common format to start from
- echo "detected raw file input : doing sox conversion"
- DEST_WAV="/tmp/TmpWave.wav"
- #cleanup previous temp file if exists
- rm $DEST_WAV -f
- echo "destination wave file : " $DEST_WAV
- sox -t raw -r $RATE -c $NUM_CHANNELS -e float -b32 ${IMPULSE_FILE} -t wav ${DEST_WAV}
- IMPULSE_FILE="$DEST_WAV"
- echo "IMPULSE_FILE : " $IMPULSE_FILE
+	echo "pcm filer file -> just copy"
+ 	cp $IMPULSE_FILE $PCM_IMP_FILENAME
 fi
 
-#loop over NUM_CHANNELS and create a filter for each channel
-for ((i=1;i<=NUM_CHANNELS;i++));
-do
-    PCM_IMP_FILENAME=${TMP}/impulse_chanel$i.pcm    
-    REMIX_PARAM="remix "$i
-    $SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
-    echo DRCCfgFile : $DRC_CFG_FILE
-    echo "calculating filters"
-    PCM_FILTER=${TMP}/filter$i.pcm
-    drc --BCInFile=$PCM_IMP_FILENAME --PSOutFile=$PCM_FILTER --TCOutFile=test.pcm "${DRC_CFG_FILE}"
-    WAV_FILTER=${TMP}/filter$i.wav
-    sox -t raw -r $RATE -c 1 -e float -b32 ${PCM_FILTER} -t wav ${WAV_FILTER}
-    PCM_FILTERS[i]=$WAV_FILTER
-done
-
-if [ $NUM_CHANNELS == 1 ]; then
-    cp ${PCM_FILTERS[1]} ${FILTER_FILE}
-else
-    #merge all filters into one wave
-    echo "merging all filters : " ${PCM_FILTERS[1]} ${PCM_FILTERS[2]} ${FILTER_FILE}
-    sox -M ${PCM_FILTERS[1]} ${PCM_FILTERS[2]} ${FILTER_FILE}
-fi
+echo DRCCfgFile : $DRC_CFG_FILE
+echo "calculating filters"
+PCM_FILTER=${TMP}/filter.pcm
+drc --BCInFile=$PCM_IMP_FILENAME --PSOutFile=$PCM_FILTER --TCOutFile=test.pcm "${DRC_CFG_FILE}"
+sox -t raw -r $RATE -c 1 -e float -b32 ${PCM_FILTER} -t wav ${FILTER_FILE}
