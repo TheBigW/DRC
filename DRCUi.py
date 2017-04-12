@@ -542,6 +542,9 @@ class DRCDlg:
             if drcMethod == "DRC":
                 drcScript = self.prepareDRC(avgImpRespFile, channelFilterFile,
                     targetCurveFileName)
+                drcScript.append(avgImpRespFile)
+                drcScript.append(channelFilterFile)
+                drcScript.append(str(currChannel))
             elif drcMethod == "PORC":
                 drcScript = [rb.find_plugin_file(self.parent, "calcFilterPORC")]
                 porcCommand = pluginPath + "/porc/porc.py"
@@ -551,29 +554,22 @@ class DRCDlg:
                         "install in the DRC plugin subfolder 'porc'")
                     return
                 drcScript.append(porcCommand)
+                drcScript.append(avgImpRespFile)
+                drcScript.append(channelFilterFile)
+                drcScript.append(str(currChannel))
+                drcScript.append(targetCurveFileName)
                 if self.porcCfgDlg.getMixedPhaseEnabled():
                     drcScript.append("--mixed")
-                drcScript.append(targetCurveFileName)
-                copyfile(channelFilterFile, filterResultFile)
-            # execute measure script to generate filters
-            # last 2 parameters for all scripts allways impulse response and
-            # result filter
-            drcScript.append(avgImpRespFile)
-            drcScript.append(channelFilterFile)
-            drcScript.append(str(currChannel))
             print(("drc command line: " + str(drcScript)))
             p = subprocess.Popen(drcScript, 0, None, None, subprocess.PIPE,
                                  subprocess.PIPE)
             (out, err) = p.communicate()
             print(("output from filter calculate script : " + str(out)))
-            if drcMethod == "PORC":
-                break
         #use sox to merge all results to one filtefile
-        if drcMethod == "DRC":
-            soxMergeCall.append(filterResultFile)
-            p = subprocess.Popen(soxMergeCall, 0, None, None, subprocess.PIPE,
-                subprocess.PIPE)
-            print(("output from sox filter merge : " + str(out)))
+        soxMergeCall.append(filterResultFile)
+        p = subprocess.Popen(soxMergeCall, 0, None, None, subprocess.PIPE,
+            subprocess.PIPE)
+        print(("output from sox filter merge : " + str(out)))
         self.filechooserbtn.set_filename(filterResultFile)
         self.set_filter()
         self.notebook.next_page()
