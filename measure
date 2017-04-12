@@ -16,7 +16,7 @@ LSCONV="lsconv"
 ARECORD="arecord"
 SYNC="sync"
 SLEEP="sleep"
-TEST_MODE=true
+#TEST_MODE=true
 
 # Default parameters
 TMP="/tmp"
