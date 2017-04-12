@@ -3,11 +3,11 @@
 # Get command line parameters
 
 PORC="${1}"
-PORC_PARAMS="${2}"
-TARGET_CURVE_FILE="${3}"
-IMPULSE_FILE="${4}"
-FILTER_FILE="${5}"
-CURR_CHANNEL="${6}"
+IMPULSE_FILE="${2}"
+FILTER_FILE="${3}"
+CURR_CHANNEL="${4}"
+TARGET_CURVE_FILE="${5}"
+PORC_PARAMS="${6}"
 
 TAPS=4096
 RATE="44100"
@@ -15,18 +15,26 @@ RATE="44100"
 
 filename=$(basename "$IMPULSE_FILE")
 extension="${filename##*.}"
+EXTRACT_CHAN_FILE="/tmp/porc_1chan"$CURR_CHANNEL.wav
 echo "extension : " $extension
 if [ "$extension" != "wav" ]; then
   echo "detected raw file input : doing sox conversion"
-  DEST_WAV="/tmp/TmpWave.wav"
   #cleanup previous temp file if exists
-  rm $DEST_WAV -f
+  rm $EXTRACT_CHAN_FILE -f
   echo "destination wave file : " $DEST_WAV
-  sox -t raw -r $RATE -c 1 -e float -b32 ${IMPULSE_FILE} -t wav ${DEST_WAV}
+  sox -t raw -r $RATE -c 1 -e float -b32 ${IMPULSE_FILE} -t wav ${EXTRACT_CHAN_FILE}
   IMPULSE_FILE="$DEST_WAV"
   echo "IMPULSE_FILE : " $IMPULSE_FILE
 else
- echo "nothing to do: already got wave file"
+	REMIX_PARAM="remix "$((CURR_CHANNEL + 1))
+	echo "wavefile -> converting to pcm for DRC with remix param : "$REMIX_PARAM
+	sox $IMPULSE_FILE -t wav -r $RATE -t wav -c 1 ${EXTRACT_CHAN_FILE} $REMIX_PARAM
+fi
+
+if [ -z "$TARGET_CURVE_FILE" ]; then
+	echo "target curve not set"
+else
+	PORC_PARAMS=$PORC_PARAMS" -t ""${TARGET_CURVE_FILE}"
 fi
 
 #filter length 65535 : same as DRC
@@ -34,7 +42,7 @@ echo "calculating filters"
 
 PCM_FILTER=/tmp/PORC_TMP_Filter.pcm
 
-python $PORC $PORC_PARAMS -n $TAPS -o bin -t "${TARGET_CURVE_FILE}" $IMPULSE_FILE $PCM_FILTER
+python $PORC $PORC_PARAMS -n $TAPS -o bin $EXTRACT_CHAN_FILE $PCM_FILTER
 
 #convert result to wav
-sox -t raw -r $RATE -c 2 -e float -b32 ${PCM_FILTER} -t wav $FILTER_FILE
+sox -t raw -r $RATE -c 1 -e float -b32 ${PCM_FILTER} -t wav $FILTER_FILE
