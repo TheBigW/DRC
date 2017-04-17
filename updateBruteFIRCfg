@@ -13,10 +13,10 @@ if [[ $# < 2 ]]; then
 else
 	#output file parameters with soxi and parse number of channels: create one pcm file per channel
 	SOXI_RESULT="$(soxi $WAV_FILTER_FILE)"
-	regex="Channels.*([0-9])"
+	regex="Channels       : ([0-9])"
 	[[ $SOXI_RESULT =~ $regex ]]
 	NUM_WAV_CHANNELS=${BASH_REMATCH[1]}
-	echo "runnign sox to create bruteFIR pcm filters"	
+	echo "runnign sox to create bruteFIR pcm filters for "$NUM_WAV_CHANNELS" channels"	
 	for ((i=1;i<=NUM_WAV_CHANNELS;i++));
 	do
 		CURRENT_FILE=~/filter_$i.pcm
