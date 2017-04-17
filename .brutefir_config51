@@ -1,0 +1,97 @@
+logic: "cli" { port: 3000; };
+
+coeff "DRC_L" {
+       filename: "~/filter_1.pcm";
+       format: "FLOAT_LE";     # file format
+};
+coeff "DRC_R" {
+       filename: "~/filter_2.pcm";
+       format: "FLOAT_LE";     # file format
+};
+
+coeff "DRC_C" {
+       filename: "~/filter_3.pcm";
+       format: "FLOAT_LE";     # file format
+};
+
+coeff "DRC_RS" {
+       filename: "~/filter_4.pcm";
+       format: "FLOAT_LE";     # file format
+};
+
+coeff "DRC_LS" {
+       filename: "~/filter_5.pcm";
+       format: "FLOAT_LE";     # file format
+};
+
+coeff "DRC_LFE" {
+       filename: "~/filter_6.pcm";
+       format: "FLOAT_LE";     # file format
+};
+
+
+input "left_in", "right_in", "center_in", "right_surround_in", "left_surround_in", "LFE_in" {
+        device: "alsa" { device: "hw:0,1"; ignore_xrun: true; };
+		channels: 6/0,1,2,3,4,5;    # number of open channels / which to use
+        delay: 0,0;         # delay in samples for each channel
+		maxdelay: -1;	    # max delay for variable delays
+		mute: false, false; # mute active on startup for each channel
+};
+
+output "left_out", "right_out", "center_out", "right_surround_out", "left_surround_out", "LFE_out" {
+    device: "alsa" { device: "hw:1,0"; ignore_xrun: true; };
+	sample: "S32_LE";
+	channels: 6/0,1,2,3,4,5;    # number of open channels / which to use
+    delay: 0,0;         # delay in samples for each channel
+	maxdelay: -1;	    # max delay for variable delays
+	mute: false, false; # mute active on startup for each channel
+};
+
+filter "left_DRC" {
+        from_inputs: "left_in";
+        to_outputs: "left_out";
+		coeff:"DRC_L";
+		process: -1;
+		crossfade: false;
+};
+
+filter "right_DRC" {
+        from_inputs: "right_in";
+        to_outputs: "right_out";
+		coeff:"DRC_R";
+		process: -1;
+		crossfade: false;
+};
+
+filter "center_DRC" {
+        from_inputs: "center_in";
+        to_outputs: "center_out";
+		coeff:"DRC_C";
+		process: -1;
+		crossfade: false;
+};
+
+filter "right_surround_DRC" {
+        from_inputs: "right_surround_in";
+        to_outputs: "right_surround_out";
+		coeff:"DRC_RS";
+		process: -1;
+		crossfade: false;
+};
+
+filter "left_surround_DRC" {
+        from_inputs: "left_surround_in";
+        to_outputs: "left_surround_out";
+		coeff:"DRC_LS";
+		process: -1;
+		crossfade: false;
+};
+
+filter "LFE_DRC" {
+        from_inputs: "LFE_in";
+        to_outputs: "LFE_out";
+		coeff:"DRC_LFE";
+		process: -1;
+		crossfade: false;
+};
+
