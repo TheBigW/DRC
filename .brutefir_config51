@@ -1,38 +1,61 @@
+##
+## DEFAULT GENERAL SETTINGS
+##
+
+float_bits: 32;             # internal floating point precision
+sampling_rate: 48000;       # sampling rate in Hz of audio interfaces
+filter_length: 4096;     # length of filters
+overflow_warnings: true;    # echo warnings to stderr if overflow occurs
+show_progress: true;        # echo filtering progress to stderr
+max_dither_table_size: 0;   # maximum size in bytes of precalculated dither
+allow_poll_mode: false;     # allow use of input poll mode
+modules_path: ".";          # extra path where to find BruteFIR modules
+monitor_rate: false;        # monitor sample rate
+powersave: false;           # pause filtering when input is zero
+lock_memory: true;          # try to lock memory if realtime prio is set
+sdf_length: -1;             # subsample filter half length in samples
+safety_limit: 20;           # if non-zero max dB in output before aborting
+convolver_config: "/home/tobias/.brutefir_convolver"; # location of convolver config file
+
+##
+## LOGIC
+##
 logic: "cli" { port: 3000; };
 
 coeff "DRC_L" {
-       filename: "~/filter_1.pcm";
+       filename: "/home/tobias/filter_1.pcm";
        format: "FLOAT_LE";     # file format
 };
 coeff "DRC_R" {
-       filename: "~/filter_2.pcm";
+       filename: "/home/tobias/filter_2.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 coeff "DRC_C" {
-       filename: "~/filter_3.pcm";
+       filename: "/home/tobias/filter_3.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 coeff "DRC_RS" {
-       filename: "~/filter_4.pcm";
+       filename: "/home/tobias/filter_4.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 coeff "DRC_LS" {
-       filename: "~/filter_5.pcm";
+       filename: "/home/tobias/filter_5.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 coeff "DRC_LFE" {
-       filename: "~/filter_6.pcm";
+       filename: "/home/tobias/filter_6.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 
 input "left_in", "right_in", "center_in", "right_surround_in", "left_surround_in", "LFE_in" {
         device: "alsa" { device: "hw:0,1"; ignore_xrun: true; };
-		channels: 6/0,1,2,3,4,5;    # number of open channels / which to use
+		sample: "S16_LE";
+		channels: 8/0,1,2,3,4,5;    # number of open channels / which to use
         delay: 0,0;         # delay in samples for each channel
 		maxdelay: -1;	    # max delay for variable delays
 		mute: false, false; # mute active on startup for each channel
@@ -40,8 +63,8 @@ input "left_in", "right_in", "center_in", "right_surround_in", "left_surround_in
 
 output "left_out", "right_out", "center_out", "right_surround_out", "left_surround_out", "LFE_out" {
     device: "alsa" { device: "hw:1,0"; ignore_xrun: true; };
-	sample: "S32_LE";
-	channels: 6/0,1,2,3,4,5;    # number of open channels / which to use
+	sample: "S16_LE";
+	channels: 8/5,4,3,2,1,0;    # number of open channels / which to use
     delay: 0,0;         # delay in samples for each channel
 	maxdelay: -1;	    # max delay for variable delays
 	mute: false, false; # mute active on startup for each channel
