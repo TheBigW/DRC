@@ -1,36 +1,64 @@
+##
+## DEFAULT GENERAL SETTINGS
+##
+
+float_bits: 32;             # internal floating point precision
+sampling_rate: 96000;       # sampling rate in Hz of audio interfaces
+filter_length: 4096;     # length of filters
+overflow_warnings: true;    # echo warnings to stderr if overflow occurs
+show_progress: true;        # echo filtering progress to stderr
+max_dither_table_size: 0;   # maximum size in bytes of precalculated dither
+allow_poll_mode: false;     # allow use of input poll mode
+modules_path: ".";          # extra path where to find BruteFIR modules
+monitor_rate: false;        # monitor sample rate
+powersave: false;           # pause filtering when input is zero
+lock_memory: true;          # try to lock memory if realtime prio is set
+sdf_length: -1;             # subsample filter half length in samples
+safety_limit: 20;           # if non-zero max dB in output before aborting
+convolver_config: "~/.brutefir_convolver"; # location of convolver config file
+
+
+##
+## LOGIC
+##
 logic: "cli" { port: 3000; };
 
 coeff "DRC_L" {
-       filename: "~/filter_1.pcm";
-       format: "FLOAT_LE";     # file format
+	filename: "/home/tobias/filter_1.pcm";
+	format: "FLOAT_LE";     # file format
 };
+
 coeff "DRC_R" {
-       filename: "~/filter_2.pcm";
-       format: "FLOAT_LE";     # file format
+	filename: "/home/tobias/filter_2.pcm";
+	format: "FLOAT_LE";     # file format
 };
 
 input "left_in", "right_in" {
         device: "alsa" { device: "hw:0,1"; ignore_xrun: true; };
+		sample: "S32_LE";
+		channels: 2/0,1;    # number of open channels / which to use
 };
 
 output "left_out", "right_out" {
-        device: "alsa" { device: "hw:1,0"; ignore_xrun: true; };
-	sample: "S32_LE";
+        device: "alsa" { device: "hw:3,0"; ignore_xrun: true; };
+	    sample: "S32_LE";
+		channels: 2/0,1;    # number of open channels / which to use
 };
 
 filter "left_DRC" {
         from_inputs: "left_in";
         to_outputs: "left_out";
-	coeff:"DRC_L";
-	process: -1;
-	crossfade: false;
+		coeff:"DRC_L";
+		process: -1;        # process index to run in (-1 means auto)
+		delay: 0;           # predelay, in blocks
+		crossfade: false;   # crossfade when coefficient is changed
 };
 
 filter "right_DRC" {
         from_inputs: "right_in";
         to_outputs: "right_out";
-	coeff:"DRC_R";
-	process: -1;
-	crossfade: false;
+		coeff:"DRC_R";
+		process: -1;        # process index to run in (-1 means auto)
+		delay: 0;           # predelay, in blocks
+		crossfade: false;   # crossfade when coefficient is changed
 };
-

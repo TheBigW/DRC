@@ -34,14 +34,16 @@ fi
 if [ -z "$TARGET_CURVE_FILE" ]; then
 	echo "target curve not set"
 else
-	PORC_PARAMS=$PORC_PARAMS" -t ""${TARGET_CURVE_FILE}"
+	cp "$TARGET_CURVE_FILE" /tmp/target_curve.txt
+	PORC_PARAMS="-t /tmp/target_curve.txt "$PORC_PARAMS
 fi
 
 #filter length 65535 : same as DRC
 echo "calculating filters"
 
-PCM_FILTER=/tmp/PORC_TMP_Filter.pcm
+PCM_FILTER="/tmp/porc_tmp_filter"$CURR_CHANNEL".pcm"
 
+echo "executing porc: "$PORC $PORC_PARAMS -n $TAPS -o bin $EXTRACT_CHAN_FILE $PCM_FILTER
 python $PORC $PORC_PARAMS -n $TAPS -o bin $EXTRACT_CHAN_FILE $PCM_FILTER
 
 #convert result to wav
