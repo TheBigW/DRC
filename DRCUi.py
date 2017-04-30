@@ -273,14 +273,12 @@ class DRCDlg:
         self.updateBruteFIRCfg(True)
         self.saveSettings()
         self.set_filter()
-        self.checkbuttonEnableFiltering.set_active(True)
 
     def on_applyFilterGST(self):
         self.comboboxFIRFilterMode.set_active(1)
         self.saveSettings()
         self.set_filter()
         self.updateBruteFIRCfg(False)
-        self.checkbuttonEnableFiltering.set_active(True)
 
     def disableFiltering(self):
         self.comboboxFIRFilterMode.set_active(0)
