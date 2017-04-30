@@ -15,7 +15,7 @@ powersave: false;           # pause filtering when input is zero
 lock_memory: true;          # try to lock memory if realtime prio is set
 sdf_length: -1;             # subsample filter half length in samples
 safety_limit: 20;           # if non-zero max dB in output before aborting
-convolver_config: "/home/tobias/brutefir51/.brutefir_convolver"; # location of convolver config file
+convolver_config: "/home/micha/.brutefir_convolver"; # location of convolver config file
 
 ##
 ## LOGIC
@@ -23,31 +23,31 @@ convolver_config: "/home/tobias/brutefir51/.brutefir_convolver"; # location of c
 logic: "cli" { port: 3000; };
 
 coeff "DRC_L" {
-       filename: "/home/tobias/brutefir51/filter_1.pcm";
+       filename: "/home/micha/filter_1.pcm";
        format: "FLOAT_LE";     # file format
 };
 coeff "DRC_R" {
-       filename: "/home/tobias/brutefir51/filter_2.pcm";
+       filename: "/home/micha/filter_2.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 coeff "DRC_C" {
-       filename: "/home/tobias/brutefir51/filter_3.pcm";
+       filename: "/home/micha/filter_3.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 coeff "DRC_RS" {
-       filename: "/home/tobias/brutefir51/filter_4.pcm";
+       filename: "/home/micha/filter_6.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 coeff "DRC_LS" {
-       filename: "/home/tobias/brutefir51/filter_5.pcm";
+       filename: "/home/micha/filter_5.pcm";
        format: "FLOAT_LE";     # file format
 };
 
 coeff "DRC_LFE" {
-       filename: "/home/tobias/brutefir51/filter_6.pcm";
+       filename: "/home/micha/filter_4.pcm";
        format: "FLOAT_LE";     # file format
 };
 
@@ -62,7 +62,7 @@ input "left_in", "right_in", "center_in", "right_surround_in", "left_surround_in
 };
 
 output "left_out", "right_out", "center_out", "right_surround_out", "left_surround_out", "LFE_out" {
-    device: "alsa" { device: "hw:1,0"; ignore_xrun: true; };
+    device: "alsa" { device: "hw:2,0"; ignore_xrun: true; };
 	sample: "S16_LE";
 	channels: 8/0,1,2,3,4,5;    # number of open channels / which to use
     delay: 0,0;         # delay in samples for each channel
@@ -97,7 +97,7 @@ filter "center_DRC" {
 filter "right_surround_DRC" {
         from_inputs: "right_surround_in";
         to_outputs: "right_surround_out";
-		coeff:"DRC_LFE";
+		coeff:"DRC_RS";
 		process: -1;
 		crossfade: false;
 };
@@ -113,8 +113,7 @@ filter "left_surround_DRC" {
 filter "LFE_DRC" {
         from_inputs: "LFE_in";
         to_outputs: "LFE_out";
-		coeff:-1;
-		#"DRC_RS";
+		coeff:-1;#"DRC_LFE";
 		process: -1;
 		crossfade: false;
 };
