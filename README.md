@@ -72,16 +72,16 @@ Especially the bass response below 80Hz is critical as it is almost impossible t
 Rhythmbox and room correction work on the raspberry PI! It can be insatlled on raspbian and the gstreamer as well as the brutefir FIR filtering works stable with no too significant CPU-load drain. Measuring on the PI works flawless. The PI only has issues with multi-channel USB soundcards.
 
 <h4>Known issues</h4>
-1) After measuring and filter calculation the filter can be directly applied. On some distributions this can cause audible issues and does not work. This can be worked around by just restarting rhythmbox.
-2) for some reasons RB is not able to play continously once the FIR filter is set. A workaround got introduced that resets each track once started. That causes small gaps which are audible once continous tracks with gapless transition are played. Working on it :).
+<p>1) After measuring and filter calculation the filter can be directly applied. On some distributions this can cause audible issues and does not work. This can be worked around by just restarting rhythmbox.</p>
+<p>2) for some reasons RB is not able to play continously once the FIR filter is set. A workaround got introduced that resets each track once started. That causes small gaps which are audible once continous tracks with gapless transition are played. Working on it :). One immediate fix is to jus use the brutefir convolution approach</p>
 
 <h4>usage for home cinema measurements</h4>
 The plugin now supports 5.1 maeasurements! See TODO for some limitations. 
 
 <h4>TODO</h4>
-- better documentation
-- measurement sample rate shall be configurable
-- 5.1 drc filter creation seems not yet to produce good result for the LFE channel, even with adapted target curve (for now just disabled correction for the LFE in the brutefir config)
-- 5.1 measurement only supports digital output as AC3. TODO: also offer option for multichannel analog interfaces
+<p>- better documentation</p>
+<p>- measurement sample rate shall be configurable</p>
+<p>- 5.1 drc filter creation seems not yet to produce good result for the LFE channel, even with adapted target curve (for now just disabled correction for the LFE in the brutefir config)</p>
+<p>- 5.1 measurement only supports digital output as AC3. TODO: also offer option for multichannel analog interfaces</p>
 
 Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.
