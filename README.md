@@ -58,7 +58,7 @@ for installation on Ubuntu: sudo apt-get install alsa-utils sox
 for those with some courage to try some new functionality: DRC supports multi channel correction, meaning a separate measure/filter per audio channel. To support this gstreamer plugins-good need to be patched as long as this change gets not a part of the gstreamer-plugins-good (see gst-plugins-good-patch folder) - I use it this way myself on Ubuntu 14.04/15.04.
 
 <h4>experimenal functions and further development</h4>
-There are 2 experimental functions which only work to a limited extend: brutefir support and iterative measurements. Both shall be understood as an outlook and are not fully supported yet. brutefir support at least creates a split of the current filter suitable for brutefir use directly in the home directory. Brutefir is a good way to achieve system wide DRC while the rhythmbox related application is limited just to RB.
+There are 2 experimental functions which only work to a limited extend: brutefir support and iterative measurements. Both shall be understood as an outlook and are not fully supported yet. brutefir support at least creates a split of the current filter suitable for brutefir use directly in the home directory. Brutefir is a good way to achieve system wide DRC while the rhythmbox related application is limited just to RB. It works and I also ahve it in use on the PI and my PC, but brutefir setup needs still some manual steps (setup alsa-loop etc..)
 <h3>averaged multi-measurements</h3>
 Usually one good measurement approved by the QA - Dialog is sufficient to calculate a good correction filter (easiest default). It is possible to perform multiple measurements even across multiple positions and average the result. This can even be used to achieve a higher weight of the direct sounds vs the reflected sound. A good approach is to have one central measurement at the  listening position and multiple (up to 5) in 10 centimeter distance on the axis centered towards the speakers. The weight of the measurements shall be adapted according to the distance (central listening position measurement with the heighest weighting factor).
 
@@ -69,10 +69,19 @@ Even though DRC is a great tool to help with room accoustical problems it can't 
 Especially the bass response below 80Hz is critical as it is almost impossible to counter act with accoustical treatment. Speaker placement and/or usage of 2/4 subwoofers can help to minimize such problems. If needed I could (and will) describe in more detail how I achieved that in my listening room.
 
 <h4>usage on the raspberry PI</h4>
-Rhythmbox and room correction work on the raspberry PI! It can be insatlled on raspbian and the gstreamer as well as the brutefir FIR filtering works stable with no too significant CPU-load drain. Measuring on the PI with a USB audio device seems to be critical: on the PI it produces crackles for playback and measurement, so the filters and measurement shall be performed on a more powerfull machine. Playback works flawlessly (onfortunately not for USB audio devices ...)
+Rhythmbox and room correction work on the raspberry PI! It can be insatlled on raspbian and the gstreamer as well as the brutefir FIR filtering works stable with no too significant CPU-load drain. Measuring on the PI works flawless. The PI only has issues with multi-channel USB soundcards.
 
 <h4>Known issues</h4>
 1) After measuring and filter calculation the filter can be directly applied. On some distributions this can cause audible issues and does not work. This can be worked around by just restarting rhythmbox.
 2) for some reasons RB is not able to play continously once the FIR filter is set. A workaround got introduced that resets each track once started. That causes small gaps which are audible once continous tracks with gapless transition are played. Working on it :).
+
+<h4>usage for home cinema measurements</h4>
+The plugin now supports 5.1 maeasurements! See TODO for some limitations. 
+
+<h4>TODO</h4>
+- better documentation
+- measurement sample rate shall be configurable
+- 5.1 drc filter creation seems not yet to produce good result for the LFE channel, even with adapted target curve (for now just disabled correction for the LFE in the brutefir config)
+- 5.1 measurement only supports digital output as AC3. TODO: also offer option for multichannel analog interfaces
 
 Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.
