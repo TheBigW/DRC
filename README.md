@@ -83,6 +83,6 @@ The plugin now supports 5.1 maeasurements! See TODO for some limitations.
 <p>- measurement sample rate shall be configurable</p>
 <p>- 5.1 drc filter creation seems not yet to produce good result for the LFE channel, even with adapted target curve (for now just disabled correction for the LFE in the brutefir config)</p>
 <p>- 5.1 measurement only supports digital output as AC3. TODO: also offer option for multichannel analog interfaces</p>
-<p> read device capabilities rather from /proc/asound than using aplay/arecord</p>
+<p>- read device capabilities rather from /proc/asound than using aplay/arecord</p>
 
 Thanks to all the great guys doing amazing SW stuff in the web! This tool is just trying to put it together in an easy usable way.
