@@ -324,7 +324,8 @@ class DRCDlg:
                        impOutputFile,
                        self.comboInputChanel.get_active_text(),
                        str(self.exec_2ChannelMeasure.get_active()),
-                       str(int(self.spinbutton_NumChannels.get_value()))]
+                       str(int(self.spinbutton_NumChannels.get_value())),
+                       str(self.comboSampleRate.get_active_text())]
             p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE,
                              subprocess.PIPE)
             (out, err) = p.communicate()
