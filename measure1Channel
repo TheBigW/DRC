@@ -1,6 +1,5 @@
 #!/bin/bash
 BIT_DEPTH=32
-SAMPLE_RATE=44100
 SILENCE_LENGTH=2
 TMP="/tmp"
 
@@ -14,12 +13,17 @@ IMP_OUT_FILE="$7"
 REC_CHANNEL="$8"
 SEPARATE_CHANNEL="$9"
 NUM_CHANNELS="${10}"
+SAMPLE_RATE="${11}"
+
 PLUGIN_PATH=`dirname $0`
 
 $ECHO "Temporary file cleanup of previous measurment..."
 $RM ${TMP}/*.pcm
 $RM ${TMP}/*.wav
 
+if [ -z "$SAMPLE_RATE" ]; then
+    SAMPLE_RATE=44100
+fi
 
 messurescript=${PLUGIN_PATH}"/measure"
 echo "\n\n executing" $messurescript $BIT_DEPTH $SAMPLE_RATE $START_FREQ $END_FREQ $DURATION $SILENCE_LENGTH $INPUT_HW $OUTPUT_HW ${IMP_OUT_FILE} $AMPLITUDE $REC_CHANNEL $SEPARATE_CHANNEL $NUM_CHANNELS"\n\n"
