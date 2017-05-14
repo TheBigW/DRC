@@ -17,6 +17,10 @@ echo "extension : " $extension
 if [ "$extension" == "wav" ]; then
 	REMIX_PARAM="remix "$((CURR_CHANNEL + 1))
 	echo "wavefile -> converting to pcm for DRC with remix param : "$REMIX_PARAM
+    regex="Sample Rate    : ([0-9]{4,7})"
+    SOXI_RESULT="$(soxi $IMPULSE_FILE)"
+    [[ $SOXI_RESULT =~ $regex ]]
+    RATE=${BASH_REMATCH[1]}
 	$SOX $IMPULSE_FILE -t raw -r $RATE -e float -b 32 -c 1 $PCM_IMP_FILENAME $REMIX_PARAM
 else
 	echo "pcm filer file -> just copy"
