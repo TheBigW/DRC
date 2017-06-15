@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.18.3 -->
+<!-- Generated with glade 3.20.0 -->
 <interface>
   <requires lib="gtk+" version="3.10"/>
   <object class="GtkDialog" id="EQDlg">
@@ -286,7 +286,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">1</property>
+                        <property name="position">2</property>
                       </packing>
                     </child>
                     <child>
@@ -298,7 +298,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">2</property>
+                        <property name="position">3</property>
                       </packing>
                     </child>
                     <child>
@@ -321,7 +321,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">3</property>
+                        <property name="position">4</property>
                       </packing>
                     </child>
                     <child>
@@ -337,7 +337,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">4</property>
+                        <property name="position">5</property>
                       </packing>
                     </child>
                     <child>
@@ -387,6 +387,35 @@ NOTE: all factors shall summ up to 1</property>
                       </packing>
                     </child>
                     <child>
+                      <object class="GtkLabel" id="labelSampleRate">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Sample Rate</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">10</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="comboSampleRate">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="active">0</property>
+                        <items>
+                          <item translatable="yes">44100</item>
+                          <item translatable="yes">48000</item>
+                          <item translatable="yes">96000</item>
+                        </items>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">11</property>
+                      </packing>
+                    </child>
+                    <child>
                       <object class="GtkLabel" id="labelInputVolume">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -395,7 +424,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">10</property>
+                        <property name="position">12</property>
                       </packing>
                     </child>
                     <child>
@@ -406,7 +435,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">11</property>
+                        <property name="position">13</property>
                       </packing>
                     </child>
                     <child>
@@ -418,7 +447,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">12</property>
+                        <property name="position">14</property>
                       </packing>
                     </child>
                     <child>
@@ -434,7 +463,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">14</property>
+                        <property name="position">15</property>
                       </packing>
                     </child>
                     <child>
@@ -446,7 +475,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">15</property>
+                        <property name="position">16</property>
                       </packing>
                     </child>
                     <child>
@@ -459,7 +488,7 @@ NOTE: all factors shall summ up to 1</property>
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">16</property>
+                        <property name="position">17</property>
                       </packing>
                     </child>
                     <child>
@@ -1041,10 +1070,10 @@ Please select:</property>
           </packing>
         </child>
         <child>
-          <object class="GtkFileChooserButton" id="filechooserbuttonBaseCfg">
+          <object class="GtkLabel" id="labelBaseCfg">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="create_folders">False</property>
+            <property name="label" translatable="yes">DRC BaseCfg</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -1053,10 +1082,10 @@ Please select:</property>
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="labelBaseCfg">
+          <object class="GtkFileChooserButton" id="filechooserbuttonBaseCfg">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">DRC BaseCfg</property>
+            <property name="create_folders">False</property>
           </object>
           <packing>
             <property name="expand">False</property>

@@ -32,7 +32,7 @@ from ChannelSelDlg import ChanelSelDlg
 from PORCCfgDlg import PORCCfgDlg
 from DRCCfgDlg import DRCCfgDlg
 from ImpRespDlg import ImpRespDlg
-from alsaTools import InputVolumeProcess
+from alsaTools import InputVolumeProcess, AlsaDevices, AlsaDevice
 import alsaTools
 
 import DRCFileTool
@@ -69,19 +69,17 @@ class DRCDlg:
 
         self.alsaPlayHardwareCombo = self.uibuilder.get_object("comboOutput")
         self.alsaRecHardwareCombo = self.uibuilder.get_object("comboRecord")
+        self.comboSampleRate = self.uibuilder.get_object("comboSampleRate")
 
         self.execMeasureBtn = self.uibuilder.get_object("buttonMeassure")
         self.execMeasureBtn.connect("clicked", self.on_execMeasure)
 
-        self.alsaPlayHardwareList = alsaTools.getDeviceListFromAlsaOutput(
-            "aplay")
-        self.alsaRecHardwareList = alsaTools.getDeviceListFromAlsaOutput(
-            "arecord")
+        self.alsaDevices = AlsaDevices()
         alsaTools.fillComboFromDeviceList(self.alsaPlayHardwareCombo,
-                                self.alsaPlayHardwareList,
+                                self.alsaDevices.alsaPlayDevs,
                                 aCfg.playHardwareIndex)
         alsaTools.fillComboFromDeviceList(self.alsaRecHardwareCombo,
-                                self.alsaRecHardwareList,
+                                self.alsaDevices.alsaRecDevs,
                                 aCfg.recHardwareIndex)
         self.alsaRecHardwareCombo.connect("changed", self.on_recDeviceChanged)
         self.comboInputChanel = self.uibuilder.get_object("comboInputChanel")
@@ -167,36 +165,31 @@ class DRCDlg:
     def on_InputChanelChanged(self, combo):
         self.startInputVolumeUpdate(combo.get_active_text())
 
+    def getAlsaPlayHardwareString(self):
+        alsHardwareSelIndex = self.alsaPlayHardwareCombo.get_active()
+        return self.alsaDevices.alsaPlayDevs[alsHardwareSelIndex].alsaHW
+
+    def getAlsaRecordHardwareString(self):
+        alsHardwareSelIndex = self.alsaRecHardwareCombo.get_active()
+        return self.alsaDevices.alsaRecDevs[alsHardwareSelIndex].alsaHW
+
     def updateRecDeviceInfo(self):
-        self.volumeUpdateBlocked = True
-        recDeviceInfo = self.getRecordingDeviceInfo()
-        if recDeviceInfo is None:
-            return
         self.comboInputChanel.remove_all()
-        # TODO: at the moment just 32 bit recording is supported. Maybe
-        # check if other bitdepths make sense too
-        self.mode = "S32_LE"
-        if "S32_LE" in recDeviceInfo[1]:
-            self.execMeasureBtn.set_sensitive(True)
-        else:
-            if len(recDeviceInfo[1]) < 1:
-                print("no mode extracted : assuming S16_LE in that case")
-                self.mode = "S16_LE"
-            else:
-                self.mode = recDeviceInfo[1][0]
-            self.showMsgBox(
-                "Recording device does not support 32 bit recording(S32_LE)")
-            self.execMeasureBtn.set_sensitive(False)
-        start = 0
-        end = int(recDeviceInfo[0][0])
-        if len(recDeviceInfo[0]) > 1:
-            start = max(int(recDeviceInfo[0][0]) - 1, 0)
-            end = int(recDeviceInfo[0][1])
-        for chanel in range(start, end):
-            self.comboInputChanel.append_text(str(chanel + 1))
-        self.volumeUpdateBlocked = False
+        self.volumeUpdateBlocked = True
+        alsHardwareSelIndex = self.alsaRecHardwareCombo.get_active()
+        currAlsaDev = self.alsaDevices.alsaRecDevs[alsHardwareSelIndex]
+        currAlsaDev.loadDeviceInfo()
+        for chanel in range(0, currAlsaDev.MaxChannel):
+            self.comboInputChanel.append_text(str(chanel+1))
+
         self.comboInputChanel.set_active(0)
-        return self.mode
+        self.comboSampleRate.remove_all()
+        all_rates = [44100,48000,96000,192000]
+        for rate in all_rates:
+            if rate >= currAlsaDev.MinRate and rate <=  currAlsaDev.MaxRate:
+                self.comboSampleRate.append_text(str(rate))
+        self.comboSampleRate.set_active(0)
+        self.volumeUpdateBlocked = False
 
     def on_recDeviceChanged(self, combo):
         self.updateRecDeviceInfo()
@@ -273,14 +266,12 @@ class DRCDlg:
         self.updateBruteFIRCfg(True)
         self.saveSettings()
         self.set_filter()
-        self.checkbuttonEnableFiltering.set_active(True)
 
     def on_applyFilterGST(self):
         self.comboboxFIRFilterMode.set_active(1)
         self.saveSettings()
         self.set_filter()
         self.updateBruteFIRCfg(False)
-        self.checkbuttonEnableFiltering.set_active(True)
 
     def disableFiltering(self):
         self.comboboxFIRFilterMode.set_active(0)
@@ -296,62 +287,6 @@ class DRCDlg:
             self.on_applyFilterGST()
         else:
             self.on_applyFilterBruteFIR()
-
-    def getRecordingDeviceInfo(self):
-        try:
-            params = ['arecord', '-D', self.getAlsaRecordHardwareString(),
-                      '--dump-hw-params', '-d 1']
-            print(("executing: " + str(params)))
-            p = subprocess.Popen(params, 0, None, None, subprocess.PIPE,
-                                 subprocess.PIPE)
-            (out, err) = p.communicate()
-            print(("hw infos : err : " + str(err) + " out : " + str(out)))
-            # I rely on channels as it seems to be not translated
-            pattern = re.compile("CHANNELS:\s\[?(\d{1,2})\s?(\d{1,2})?\]?",
-                                 re.MULTILINE)
-            numChanels = pattern.findall(str(err))
-            # workaround to remove empty match in case of just single number
-            # because I was not clever enough to have a clean
-            # conditional regex...
-            if len(numChanels[0]) > 1 and not numChanels[0][1]:
-                print("only channel number present -> truncate")
-                numChanels = [numChanels[0][0]]
-            else:
-                numChanels = [numChanels[0][0], numChanels[0][1]]
-            pattern = re.compile("(\D\d+_\w*)", re.MULTILINE)
-            supportedModes = pattern.findall(str(err))
-
-            print(("numChannels : " + str(numChanels)))
-            print(("supportedModes : " + str(supportedModes)))
-            print(("No. supported Modes : " + str(len(supportedModes))))
-            return [numChanels, supportedModes]
-        except Exception as inst:
-            print((
-                'failed to get rec hardware info...',
-                sys.exc_info()[0], type(inst), inst))
-        return None
-
-    def getAlsaPlayHardwareString(self):
-        if len(self.alsaPlayHardwareList) < 1:
-            print("no sound hardware detected")
-            return
-        alsHardwareSelIndex = self.alsaPlayHardwareCombo.get_active()
-        alsaDevicePlayback = "hw:" + str(
-            self.alsaPlayHardwareList[alsHardwareSelIndex][0]) + "," + str(
-            self.alsaPlayHardwareList[alsHardwareSelIndex][2])
-        print(("alsa output device : " + alsaDevicePlayback))
-        return alsaDevicePlayback
-
-    def getAlsaRecordHardwareString(self):
-        if len(self.alsaRecHardwareList) < 1:
-            print("no sound hardware detected")
-            return
-        alsHardwareSelIndex = self.alsaRecHardwareCombo.get_active()
-        alsaDeviceRec = "hw:" + str(
-            self.alsaRecHardwareList[alsHardwareSelIndex][0]) + "," + str(
-            self.alsaRecHardwareList[alsHardwareSelIndex][2])
-        print(("alsa input device : " + alsaDeviceRec))
-        return alsaDeviceRec
 
     def getMeasureResultsDir(self):
         cachedir = RB.user_cache_dir() + "/DRC"
@@ -389,7 +324,8 @@ class DRCDlg:
                        impOutputFile,
                        self.comboInputChanel.get_active_text(),
                        str(self.exec_2ChannelMeasure.get_active()),
-                       str(int(self.spinbutton_NumChannels.get_value()))]
+                       str(int(self.spinbutton_NumChannels.get_value())),
+                       str(self.comboSampleRate.get_active_text())]
             p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE,
                              subprocess.PIPE)
             (out, err) = p.communicate()
