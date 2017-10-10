@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, RB
+import gi
+from gi.repository import RB
+from gi.repository import Gtk
+
+from DependsWrapper import DependsWrapperImpl
+
 import os
 from DRCConfig import DRCConfig
-import rb
 
 class DRCCfgDlg():
 
@@ -18,7 +22,7 @@ class DRCCfgDlg():
     def __init__(self, parent):
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
+            DependsWrapperImpl.find_plugin_file(parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("drcCfgDlg")
         okBtn = self.uibuilder.get_object("button_OKDRCDlg")
         okBtn.connect("clicked", self.on_Ok)
