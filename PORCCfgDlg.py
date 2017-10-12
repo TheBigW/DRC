@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, RB
-import rb
+import gi
+from gi.repository import RB
+from gi.repository import Gtk
+
+from DependsWrapper import DependsWrapperImpl
 
 class PORCCfgDlg():
 
     def __init__(self, parent):
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
+            DependsWrapperImpl.find_plugin_file(parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("porcCfgDlg")
         okBtn = self.uibuilder.get_object("button_OKPORCDlg")
         okBtn.connect("clicked", self.on_Ok)

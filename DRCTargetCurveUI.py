@@ -18,10 +18,11 @@
 import inspect
 import re
 
+import gi
+from gi.repository import RB
 from gi.repository import Gtk
 
-import rb
-
+from DependsWrapper import DependsWrapperImpl
 
 def loadTargetCurveFile(targetCurveFile):
     pattern = re.compile("\n?(\d*\.?\d*)\s+(.*)\n?")
@@ -126,7 +127,7 @@ class EQControl():
         self.targetCurveFilename = targetCurveFile
         addBtn = self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
+            DependsWrapperImpl.find_plugin_file(parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("EQDlg")
         addBtn = self.uibuilder.get_object("buttonAddEQBand")
         addBtn.connect("clicked", self.add_new_eq_band)

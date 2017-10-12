@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, RB
-import os
-import rb
+import gi
+from gi.repository import RB
+from gi.repository import Gtk
+
+from DependsWrapper import DependsWrapperImpl
 
 from DRCTargetCurveUI import EQControl
 import DRCFileTool
-
 
 class TargetCurveLine():
 
@@ -45,7 +46,7 @@ class TargetCurveDlg():
     def __init__(self, parent):
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
+            DependsWrapperImpl.find_plugin_file(parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("TargetCurveSelDlg")
         self.uibuilder.get_object("button_OKTargetCurve").connect(
             "clicked", self.on_Ok)

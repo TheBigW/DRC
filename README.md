@@ -78,9 +78,13 @@ Rhythmbox and room correction work on the raspberry PI! It can be insatlled on r
 <h4>usage for home cinema measurements</h4>
 The plugin now supports 5.1 maeasurements! See TODO for some limitations. 
 
+<h4>usage as standalone python application</h4>
+A standalone mode without rhythmbox can be used by starting
+
+python3 DRCStandalone.py
+
 <h4>TODO</h4>
 <p>- better documentation</p>
-<p>- measurement sample rate shall be configurable</p>
 <p>- 5.1 drc filter creation seems not yet to produce good result for the LFE channel, even with adapted target curve (for now just disabled correction for the LFE in the brutefir config)</p>
 <p>- 5.1 measurement only supports digital output as AC3. TODO: also offer option for multichannel analog interfaces</p>
 <p>- read device capabilities rather from /proc/asound than using aplay/arecord</p>

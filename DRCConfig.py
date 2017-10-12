@@ -17,6 +17,7 @@
 
 import os
 
+import gi
 from gi.repository import RB
 
 from XMLSerializer import Serializer

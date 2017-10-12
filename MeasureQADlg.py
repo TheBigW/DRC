@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-import re
 import os
 import subprocess
 from enum import Enum
 
-from gi.repository import Gtk, RB
-
 import DRCFileTool
-import rb
 
+import gi
+from gi.repository import RB
+from gi.repository import Gtk
+
+from DependsWrapper import DependsWrapperImpl
 
 class MeasureQARetVal(Enum):
             Done = 0
@@ -22,7 +23,7 @@ class MeasureQADlg():
                  sweep_level):
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
+            DependsWrapperImpl.find_plugin_file(parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("measureQualityDlg")
         self.uibuilder.get_object("button_doneMeasQA").connect(
             "clicked", self.on_button_doneMeasQA)

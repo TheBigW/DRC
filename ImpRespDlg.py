@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, RB
-import os
-import rb
+import gi
+from gi.repository import RB
+from gi.repository import Gtk
 
+from DependsWrapper import DependsWrapperImpl
+
+import os
 
 class ImpResLine():
 
@@ -50,11 +53,11 @@ class ImpRespFileInfo():
 
 class ImpRespDlg():
 
-    def __init__(self, parent, resultsDir):
+    def __init__(self, drcDlg, resultsDir):
         self.uibuilder = Gtk.Builder()
         self.resultsDir = resultsDir
         self.uibuilder.add_from_file(
-            rb.find_plugin_file(parent, "DRCUI.glade"))
+            DependsWrapperImpl.find_plugin_file(drcDlg.parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("impRespSelDlg")
         self.uibuilder.get_object("button_OKImpRespSelDlg").connect(
             "clicked", self.on_Ok)
@@ -63,8 +66,8 @@ class ImpRespDlg():
         self.uibuilder.get_object("buttonRemoveFile").connect(
             "clicked", self.on_RemoveFile)
         self.elementGrid = self.uibuilder.get_object("elementGrid")
-        self.parent = parent
-        self.mesureResultsDir = self.parent.drcDlg.getMeasureResultsDir()
+        self.drcDlg = drcDlg
+        self.mesureResultsDir = self.drcDlg.getMeasureResultsDir()
         self.fileControlList = []
 
     def loadAllImpRespFromFolder(self, directory):

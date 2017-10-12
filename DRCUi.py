@@ -15,14 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 import os
-import sys
-import re
 import datetime
 import subprocess
-from shutil import copyfile
 
+import gi
+from gi.repository import Gtk
+from gi.repository import RB
 
-from gi.repository import Gtk, RB
+from DependsWrapper import DependsWrapperImpl
 
 from DRCConfig import DRCConfig
 from MeasureQADlg import MeasureQADlg
@@ -36,15 +36,13 @@ from alsaTools import InputVolumeProcess, AlsaDevices, AlsaDevice
 import alsaTools
 
 import DRCFileTool
-import rb
-
 
 class DRCDlg:
     def initUI(self):
         aCfg = DRCConfig()
         self.uibuilder = Gtk.Builder()
         self.uibuilder.add_from_file(
-            rb.find_plugin_file(self.parent, "DRCUI.glade"))
+            DependsWrapperImpl.find_plugin_file(self.parent, "DRCUI.glade"))
         self.dlg = self.uibuilder.get_object("DRCDlg")
         self.dlg.connect("close", self.on_close)
         audioFileFilter = Gtk.FileFilter()
@@ -120,7 +118,7 @@ class DRCDlg:
         self.drcCfgDlg = DRCCfgDlg(self.parent)
         self.porcCfgDlg = PORCCfgDlg(self.parent)
         self.channelSelDlg = ChanelSelDlg(self.parent)
-        self.impRespDlg = ImpRespDlg(self.parent, self.getMeasureResultsDir())
+        self.impRespDlg = ImpRespDlg(self, self.getMeasureResultsDir())
         self.targetCurveDlg = TargetCurveDlg(self.parent)
 
         self.exec_2ChannelMeasure = self.uibuilder.get_object(
@@ -207,12 +205,12 @@ class DRCDlg:
             self.cfgDRCButton.set_label("configure DRC")
         else:
             self.cfgDRCButton.set_label("configure PORC")
-            drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
+            drcScript = [DependsWrapperImpl.find_plugin_file(self.parent, "calcFilterDRC")]
             pluginPath = os.path.dirname(os.path.abspath(drcScript[0]))
             porcTargetCurve = pluginPath + "/porc/data/tact30f.txt"
             if not os.path.exists(porcTargetCurve):
                 print("installing PORC")
-                installScript = rb.find_plugin_file(self.parent,
+                installScript = DependsWrapperImpl.find_plugin_file(self.parent, 
                                                     "installPORC.sh")
                 pluginPath = os.path.dirname(installScript)
                 porcInstCommand = "xterm -e " + installScript + " " + \
@@ -252,8 +250,7 @@ class DRCDlg:
         self.dlg.set_visible(False)
 
     def updateBruteFIRCfg(self, enable):
-        updateBruteFIRScript = [rb.find_plugin_file(self.parent,
-                "updateBruteFIRCfg")]
+        updateBruteFIRScript = [DependsWrapperImpl.find_plugin_file(self.parent, "updateBruteFIRCfg")]
         if enable is True:
             self.comboboxFIRFilterMode.set_active(2)
             updateBruteFIRScript.append(self.getAlsaPlayHardwareString())
@@ -300,7 +297,7 @@ class DRCDlg:
 
         # TODO: make the measure script output the volume and parse from
         # there during measurement
-        scriptName = rb.find_plugin_file(self.parent, "measure1Channel")
+        scriptName = DependsWrapperImpl.find_plugin_file(self.parent, "measure1Channel")
         #create new folder for this complete measurement
         strResultsDir = self.getMeasureResultsDir() + "/" +\
                         datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + \
@@ -367,11 +364,11 @@ class DRCDlg:
         return tmpCfgDir
 
     def prepareDRC(self, impRespFile, filterResultFile, targetCurveFile):
-        drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
+        drcScript = [DependsWrapperImpl.find_plugin_file(self.parent, "calcFilterDRC")]
         drcCfgFileName = os.path.basename(self.drcCfgDlg.getBaseCfg())
         print(("drcCfgBaseName : " + drcCfgFileName))
         drcCfgSrcFile = self.drcCfgDlg.getBaseCfg()
-        drcCfgDestFile = self.getTmpCfgDir() + "/" + drcCfgFileName
+        drcCfgDestFile = self.parent.getTmpCfgDir() + "/" + drcCfgFileName
         drcScript.append(drcCfgDestFile)
         print(("drcCfgDestFile : " + drcCfgDestFile))
         # update filter file
@@ -453,7 +450,7 @@ class DRCDlg:
 
     def on_calculateDRC(self, param):
         drcMethod = self.comboDRC.get_active_text()
-        drcScript = [rb.find_plugin_file(self.parent, "calcFilterDRC")]
+        drcScript = [DependsWrapperImpl.find_plugin_file(self.parent, "calcFilterDRC")]
         pluginPath = os.path.dirname(os.path.abspath(drcScript[0]))
         filterResultFile = self.getFilterResultsDir() + "/Filter" + str(
             drcMethod) + datetime.datetime.now().strftime(
@@ -482,7 +479,7 @@ class DRCDlg:
                 drcScript.append(channelFilterFile)
                 drcScript.append(str(currChannel))
             elif drcMethod == "PORC":
-                drcScript = [rb.find_plugin_file(self.parent, "calcFilterPORC")]
+                drcScript = [DependsWrapperImpl.find_plugin_file(self.parent, "calcFilterPORC")]
                 porcCommand = pluginPath + "/porc/porc.py"
                 if not os.path.isfile(porcCommand):
                     self.showMsgBox(
@@ -501,7 +498,7 @@ class DRCDlg:
                                  subprocess.PIPE)
             (out, err) = p.communicate()
             print(("output from filter calculate script : " + str(out)))
-        #use sox to merge all results to one filtefile
+        #use sox to merge all results to one filter file
         soxMergeCall.append(filterResultFile)
         p = subprocess.Popen(soxMergeCall, 0, None, None, subprocess.PIPE,
             subprocess.PIPE)
@@ -520,8 +517,11 @@ class DRCDlg:
         print("showing UI")
         self.initUI()
         self.startInputVolumeUpdate()
-        self.dlg.show_all()
-        self.dlg.present()
+        if shell is None:
+            self.dlg.run()
+        else:
+            self.dlg.show_all()
+            self.dlg.present()
         self.inputVolumeUpdate.stop()
         print("done showing UI")
 
