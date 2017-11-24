@@ -74,7 +74,7 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
                 #the first 2 channels shall be used for gstreamer filtering
                 #as gstreamer FIR only supports at maximum 2 channels
                 audioParams = DRCFileTool.LoadAudioFileStereoChannels(
-                    filterFileName, aCfg.numFilterChanels)
+                    filterFileName, aCfg.numFilterChanels, 2)
                 filter_array = audioParams.data
                 # pass the filter data to the fir filter
                 num_filter_coeff = len(filter_array)
