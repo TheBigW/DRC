@@ -368,7 +368,7 @@ class DRCDlg:
         drcCfgFileName = os.path.basename(self.drcCfgDlg.getBaseCfg())
         print(("drcCfgBaseName : " + drcCfgFileName))
         drcCfgSrcFile = self.drcCfgDlg.getBaseCfg()
-        drcCfgDestFile = self.parent.getTmpCfgDir() + "/" + drcCfgFileName
+        drcCfgDestFile = self.getTmpCfgDir() + "/" + drcCfgFileName
         drcScript.append(drcCfgDestFile)
         print(("drcCfgDestFile : " + drcCfgDestFile))
         # update filter file
