@@ -165,29 +165,37 @@ class DRCDlg:
 
     def getAlsaPlayHardwareString(self):
         alsHardwareSelIndex = self.alsaPlayHardwareCombo.get_active()
-        return self.alsaDevices.alsaPlayDevs[alsHardwareSelIndex].alsaHW
+        alsaPlayHw="hw:0,0"
+        if len(self.alsaDevices.alsaPlayDevs) < alsHardwareSelIndex:
+            alsaPlayHw = self.alsaDevices.alsaPlayDevs[alsHardwareSelIndex].alsaHW
+        return alsaPlayHw
 
     def getAlsaRecordHardwareString(self):
         alsHardwareSelIndex = self.alsaRecHardwareCombo.get_active()
-        return self.alsaDevices.alsaRecDevs[alsHardwareSelIndex].alsaHW
+        alsaRecHw="hw:0,0"
+        if len(self.alsaDevices.alsaRecDevs) < alsHardwareSelIndex:
+            alsaRecHw = self.alsaDevices.alsaRecDevs[alsHardwareSelIndex].alsaHW
+        return alsaRecHw
 
     def updateRecDeviceInfo(self):
         self.comboInputChanel.remove_all()
         self.volumeUpdateBlocked = True
         alsHardwareSelIndex = self.alsaRecHardwareCombo.get_active()
-        currAlsaDev = self.alsaDevices.alsaRecDevs[alsHardwareSelIndex]
-        currAlsaDev.loadDeviceInfo()
-        for chanel in range(0, currAlsaDev.MaxChannel):
-            self.comboInputChanel.append_text(str(chanel+1))
+        currAlsaDev = "hw:0,0"
+        if len(self.alsaDevices.alsaRecDevs) < alsHardwareSelIndex:
+            currAlsaDev = self.alsaDevices.alsaRecDevs[alsHardwareSelIndex]
+            currAlsaDev.loadDeviceInfo()
+            for chanel in range(0, currAlsaDev.MaxChannel):
+                self.comboInputChanel.append_text(str(chanel+1))
 
-        self.comboInputChanel.set_active(0)
-        self.comboSampleRate.remove_all()
-        all_rates = [44100,48000,96000,192000]
-        for rate in all_rates:
-            if rate >= currAlsaDev.MinRate and rate <=  currAlsaDev.MaxRate:
-                self.comboSampleRate.append_text(str(rate))
-        self.comboSampleRate.set_active(0)
-        self.volumeUpdateBlocked = False
+            self.comboInputChanel.set_active(0)
+            self.comboSampleRate.remove_all()
+            all_rates = [44100,48000,96000,192000]
+            for rate in all_rates:
+                if rate >= currAlsaDev.MinRate and rate <=  currAlsaDev.MaxRate:
+                    self.comboSampleRate.append_text(str(rate))
+            self.comboSampleRate.set_active(0)
+            self.volumeUpdateBlocked = False
 
     def on_recDeviceChanged(self, combo):
         self.updateRecDeviceInfo()
