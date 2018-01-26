@@ -166,15 +166,21 @@ class DRCDlg:
     def getAlsaPlayHardwareString(self):
         alsHardwareSelIndex = self.alsaPlayHardwareCombo.get_active()
         alsaPlayHw="hw:0,0"
-        if len(self.alsaDevices.alsaPlayDevs) < alsHardwareSelIndex:
+        if len(self.alsaDevices.alsaPlayDevs) > alsHardwareSelIndex:
             alsaPlayHw = self.alsaDevices.alsaPlayDevs[alsHardwareSelIndex].alsaHW
+        else:
+            print( "getAlsaPlayHardwareString:!!!!no recording device found!!!! : ", numAlsaRecDev, alsHardwareSelIndex )
+
         return alsaPlayHw
 
     def getAlsaRecordHardwareString(self):
-        alsHardwareSelIndex = self.alsaRecHardwareCombo.get_active()
+        alsHardwareSelIndex = int(self.alsaRecHardwareCombo.get_active())
         alsaRecHw="hw:0,0"
-        if len(self.alsaDevices.alsaRecDevs) < alsHardwareSelIndex:
+        numAlsaRecDev = int(len(self.alsaDevices.alsaRecDevs))
+        if numAlsaRecDev > alsHardwareSelIndex:
             alsaRecHw = self.alsaDevices.alsaRecDevs[alsHardwareSelIndex].alsaHW
+        else:
+            print( "getAlsaRecordHardwareString:!!!!no recording device found!!!! : ", numAlsaRecDev, alsHardwareSelIndex )
         return alsaRecHw
 
     def updateRecDeviceInfo(self):
@@ -182,7 +188,7 @@ class DRCDlg:
         self.volumeUpdateBlocked = True
         alsHardwareSelIndex = self.alsaRecHardwareCombo.get_active()
         currAlsaDev = "hw:0,0"
-        if len(self.alsaDevices.alsaRecDevs) < alsHardwareSelIndex:
+        if len(self.alsaDevices.alsaRecDevs) > alsHardwareSelIndex:
             currAlsaDev = self.alsaDevices.alsaRecDevs[alsHardwareSelIndex]
             currAlsaDev.loadDeviceInfo()
             for chanel in range(0, currAlsaDev.MaxChannel):
@@ -196,6 +202,9 @@ class DRCDlg:
                     self.comboSampleRate.append_text(str(rate))
             self.comboSampleRate.set_active(0)
             self.volumeUpdateBlocked = False
+        else:
+            print( "!!!!updateRecDeviceInfo:no recording device found!!!! : ", numAlsaRecDev, alsHardwareSelIndex )
+
 
     def on_recDeviceChanged(self, combo):
         self.updateRecDeviceInfo()
