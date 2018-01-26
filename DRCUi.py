@@ -333,7 +333,7 @@ class DRCDlg:
                        self.getAlsaRecordHardwareString(),
                        self.getAlsaPlayHardwareString(),
                        "10",
-                       "21000",
+                       "22050",
                        str(self.entrySweepDuration.get_text()),
                        impOutputFile,
                        self.comboInputChanel.get_active_text(),

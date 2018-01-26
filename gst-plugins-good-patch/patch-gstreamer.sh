@@ -1,4 +1,4 @@
-GST_PLUGIN_VERSION=1.4.5
+GST_PLUGIN_VERSION=1.4.4
 apt-get source gstreamer1.0-plugins-good
 #sudo apt-get install auto-apt
 #sudo auto-apt update
@@ -14,5 +14,9 @@ cp *.h ./gst-plugins-good1.0-$GST_PLUGIN_VERSION/gst/audiofx
 #sudo auto-apt run ./gst-plugins-good1.0-1.4.5/configure
 cd ./gst-plugins-good1.0-$GST_PLUGIN_VERSION
 ./configure
-sudo make && sudo make install && sudo cp /usr/local/lib/gstreamer-1.0/* /usr/lib/i386-linux-gnu/gstreamer-1.0/ 
-
+sudo make && sudo make install
+if [ -d "/usr/lib/i386-linux-gnu/gstreamer-1.0/" ]; then
+    sudo cp /usr/local/lib/gstreamer-1.0/* /usr/lib/i386-linux-gnu/gstreamer-1.0/
+else
+    sudo cp /usr/local/lib/gstreamer-1.0/* /usr/lib/arm-linux-gnueabihf/gstreamer-1.0/
+fi
