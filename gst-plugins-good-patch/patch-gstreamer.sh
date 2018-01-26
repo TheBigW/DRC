@@ -17,6 +17,9 @@ cd ./gst-plugins-good1.0-$GST_PLUGIN_VERSION
 sudo make && sudo make install
 if [ -d "/usr/lib/i386-linux-gnu/gstreamer-1.0/" ]; then
     sudo cp /usr/local/lib/gstreamer-1.0/* /usr/lib/i386-linux-gnu/gstreamer-1.0/
-else
+else if [ -d "/usr/lib/arm-linux-gnueabihf/gstreamer-1.0/" ]; then
     sudo cp /usr/local/lib/gstreamer-1.0/* /usr/lib/arm-linux-gnueabihf/gstreamer-1.0/
+else
+    sudo make && sudo make install && sudo cp /usr/local/lib/gstreamer-1.0/* /usr/lib/x86_64-linux-gnu/gstreamer-1.0/
+
 fi
