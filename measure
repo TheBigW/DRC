@@ -75,23 +75,13 @@ CURRENT_CHANNEL="${13}"
 SWEEPFILE="sweep.pcm"
 ARECORDFMT="S32_LE"
 SOXFMT="-e signed-integer -b 32"
+#PLAY_AC3=true
 
 # Generate the log sweep
 $ECHO "all parameters " $BITS $RATE $STARTF $ENDF $LSLEN $LSSIL $INDEV $OUTDEV $IMPFILE $AMPLITUDE $REC_CHANNEL $OVERALL_CHANNELS $CURRENT_CHANNEL
 
 PLAY_SWEEP=${TMP}/msplaysweep.wav
 PLAY_SWEEP_AC3=${TMP}/msplaysweep.ac3
-
-if test $OVERALL_CHANNELS -gt 2
- then
-	MPLAYER_ALSA_DEV=result=${OUTDEV//:/=}
-	PLAY_COMMAND="mplayer -ao alsa:device=$MPLAYER_ALSA_DEV -ac hwac3 $PLAY_SWEEP_AC3"
-	#PLAY_COMMAND="xbmc-send -a "PlayMedia("$PLAY_SWEEP")""
-else
-	PLAY_COMMAND="aplay -D $OUTDEV $PLAY_SWEEP"
-fi
-
-echo "PLAY_COMMAND: "$PLAY_COMMAND
 
 # determine channel to play the sweep to
 if [ -z "$CURRENT_CHANNEL" ]; then
@@ -118,13 +108,21 @@ $GLSWEEP $RATE $AMPLITUDE $STARTF $ENDF $LSLEN $LSSIL $LEADIN $LEADOUT ${TMP}/ms
 $ECHO "Converting sweep to play format..."
 $SOX -t raw -r $RATE -c 1 -e float -b32 ${TMP}/msrawsweep.pcm -t wav -c $OVERALL_CHANNELS $SOXFMT $PLAY_SWEEP $PLAY_SWEEP_PARAM
 
-#encode the sweep to AC3 if more than 2 channels
-
 if test $OVERALL_CHANNELS -gt 2
  then
-	echo "more then 2 channels: "$OVERALL_CHANNELS" performing AC3 conversions"	
-	aften $PLAY_SWEEP_WAV $PLAY_SWEEP_AC3
- fi
+    MPLAYER_ALSA_DEV=${OUTDEV//:/=}
+    if [ -z "$PLAY_AC3" ]; then
+	    PLAY_COMMAND="mplayer -ao alsa:device=$MPLAYER_ALSA_DEV $PLAY_SWEEP -channels $OVERALL_CHANNELS"
+    else
+        echo "more then 2 channels: "$OVERALL_CHANNELS" performing AC3 conversions"	
+	    aften $PLAY_SWEEP_WAV $PLAY_SWEEP_AC3
+        PLAY_COMMAND="mplayer -ao alsa:device=$MPLAYER_ALSA_DEV -ac hwac3 $PLAY_SWEEP_AC3"
+    fi
+else
+	PLAY_COMMAND="aplay -D $OUTDEV $PLAY_SWEEP"
+fi
+
+echo "PLAY_COMMAND: "$PLAY_COMMAND
 
 # Filesystem sync
 $ECHO "Waiting 5 seconds for filesystem sync..."
