@@ -475,14 +475,14 @@ class DRCDlg:
         impRespFiles = self.impRespDlg.getImpRespFiles()
         #get number of channels from impRespFiles and loop over
         numChannels = DRCFileTool.getNumChannels(impRespFiles[0].fileName)
+        #go through all impRespFiles, average them and pass the
+        #result to the impRespFile
+        avgImpRespFile = self.calculateAvgImpResponse(impRespFiles)
         soxMergeCall = ["sox", "-M"]
         channelFilterFile = ""
         for currChannel in range(0, numChannels):
             channelFilterFile = "/tmp/filter" + str(currChannel) + ".wav"
             soxMergeCall.append(channelFilterFile)
-            #go through all impRespFiles, average them and pass the
-            #result to the impRespFile
-            avgImpRespFile = self.calculateAvgImpResponse(impRespFiles)
             #get target curve filename per channel
             targetCurveFileName = self.targetCurveDlg.getTargetCurveFileName(
                 currChannel)
