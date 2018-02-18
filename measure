@@ -114,8 +114,8 @@ if test $OVERALL_CHANNELS -gt 2
     if [ -z "$PLAY_AC3" ]; then
 	    PLAY_COMMAND="mplayer -ao alsa:device=$MPLAYER_ALSA_DEV $PLAY_SWEEP -channels $OVERALL_CHANNELS"
     else
-        echo "more then 2 channels: "$OVERALL_CHANNELS" performing AC3 conversions"	
-	    aften $PLAY_SWEEP_WAV $PLAY_SWEEP_AC3
+        echo "more then 2 channels: "$OVERALL_CHANNELS" performing AC3 conversions of"$PLAY_SWEEP" to "$PLAY_SWEEP_AC3
+	    aften $PLAY_SWEEP $PLAY_SWEEP_AC3
         PLAY_COMMAND="mplayer -ao alsa:device=$MPLAYER_ALSA_DEV -ac hwac3 $PLAY_SWEEP_AC3"
     fi
 else
