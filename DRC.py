@@ -24,6 +24,8 @@ from DRCUi import DRCDlg
 from DRC_rb3compat import ActionGroup
 from DRC_rb3compat import ApplicationShell
 from DRCConfig import DRCConfig
+from threading import Timer
+
 import DRCFileTool
 
 ui_string = """
@@ -189,9 +191,15 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
         else:
             self.selfAllowTriggered = False
 
+    def change_song_timer(self, sp, entry):
+        print("timer elapsed - perform start/play")
+        source = sp.get_playing_source()
+        sp.stop()
+        sp.play_entry(entry, source)
+        self.selfAllowTriggered = False
+
     def playing_song_changed(self, sp, entry):
         self.duration = sp.get_playing_song_duration()
-        self.entry = entry
         # print("playing song duration: " + str(self.duration))
         if entry is None or not self.selfAllowTriggered:
             return
@@ -203,10 +211,9 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
             useless:
             returns true even if no son is previous in current UI list...
         '''
-        source = sp.get_playing_source()
-        sp.stop()
-        sp.play_entry(entry, source)
-        self.selfAllowTriggered = False
+        t = Timer(1.5, self.change_song_timer, args=[sp,entry])
+        t.start()
+        print("timer done")
 
     def find_file(self, filename):
         info = self.plugin_info
