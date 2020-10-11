@@ -155,27 +155,33 @@ def dumpSoundDataToFile(data, filename, writeAsText=False):
 
 
 def LoadRawFile(filename, params):
-    print(("LoadRawFile : ", filename, " numChanels : ", params.numChannels))
+    print(("LoadRawFile : ", filename, " numChanels : ", params.numChannels, "sampleByteSize", params.sampleByteSize))
     filterFile = open(filename, "rb")
 
     filterFile.seek(params.DataOffset)
     readData = filterFile.read(params.sampleByteSize)
     while len(readData) == params.sampleByteSize:
         for chanel in range(0, params.numChannels):
-            floatSample = float(struct.unpack('f', readData)[0])
-            readData = filterFile.read(params.sampleByteSize)
-            if math.isnan(floatSample):
-                #print(("value is: ", floatSample, "resetting to 0"))
-                floatSample = float(0.0)
-            if params.maxSampleValue[chanel] < floatSample:
-                params.maxSampleValue[chanel] = floatSample
-                params.maxSampleValuePos[chanel] = len(params.data[chanel])
-                #print("found max : ",params.maxSampleValue,
-                #    params.maxSampleValuePos)
-            if params.minSampleValue[chanel] > floatSample:
-                params.minSampleValue[chanel] = floatSample
-                params.minSampleValuePos[chanel] = len(params.data[chanel])
-            params.data[chanel].append(floatSample)
+            if len(readData) == params.sampleByteSize:
+                floatSample = float(struct.unpack('f', readData)[0])
+                readData = filterFile.read(params.sampleByteSize)
+                #print ("floatSample : ", floatSample)
+                if math.isnan(floatSample):
+                    print(("value is: ", floatSample, "resetting to 0"))
+                    floatSample = float(0.0)
+                if params.maxSampleValue[chanel] < floatSample:
+                    params.maxSampleValue[chanel] = floatSample
+                    params.maxSampleValuePos[chanel] = len(params.data[chanel])
+                    #print("found max : ",params.maxSampleValue,
+                    #    params.maxSampleValuePos)
+                if params.minSampleValue[chanel] > floatSample:
+                    params.minSampleValue[chanel] = floatSample
+                    params.minSampleValuePos[chanel] = len(params.data[chanel])
+                params.data[chanel].append(floatSample)
+            else:
+                print("buffer underrun for chanel : ", chanel, "at sample:", len(params.data[chanel]) )
+                print("addin 0 sample to compensate and keep length consistent across chanels")
+                params.data[chanel].append(0.0)
     # dump the filter to check
     if params.numChannels > 1:
         print(("loaded r/l: " + str(len(params.data[0])) + "/" +

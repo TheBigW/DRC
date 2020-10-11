@@ -433,8 +433,9 @@ class DRCDlg:
         projectDir = os.path.dirname(os.path.abspath(files[0].fileName))
         impOutputFile = projectDir + "/impOutputFile"\
                 + datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + "avg.wav"
-        maxValueStartOffset = 32768
-        maxValueEndOffset = 32768
+        firstFileParam = DRCFileTool.LoadWaveFile(files[0].fileName)
+        maxValueStartOffset = int(len(firstFileParam.data[0]) / 2)
+        maxValueEndOffset = int(maxValueStartOffset)
         avgImpulseLength = maxValueEndOffset + maxValueStartOffset
         #loop over all impulse responses for all chanels and
         #calculate average response
@@ -451,10 +452,12 @@ class DRCDlg:
                         maxValueStartOffset + self.getSampleShift(
                             currFileInfo.centerDistanceInCentimeter)
                 print(("impulseStart:", impulseStart))
-                for index in range(0, avgImpulseLength):
-                    avgData[chanel][index] += float(params.data[chanel][
+                samplesUntilEnd = avgImpulseLength - impulseStart
+                for index in range(0, samplesUntilEnd):
+                    avgValue = float(params.data[chanel][
                         impulseStart + index] *
                             currFileInfo.weightingFactor)
+                    avgData[chanel][index] += avgValue
                     #print(("avgData[chanel][index] : ",
                     #    avgData[chanel][index],
                     #    params.data[chanel][impulseStart + index]))
