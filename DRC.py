@@ -50,7 +50,10 @@ class DRCPlugin(GObject.Object, Peas.Activatable):
     def set_kernel(self, filter_array):
         hasMultiKernel = True
         try:
-            self.fir_filter.set_property('multi-channel-kernel', filter_array)
+            self.fir_filter.set_property('num-filter-channels', 2 )
+            filter = filter_array[0] + filter_array[1]
+            self.fir_filter.set_property('kernel', filter)
+            print("filter channels set")
         except Exception as inst:
             print((
                 'setting multi chanel filter: attempting to set single kernel',
