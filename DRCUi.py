@@ -434,9 +434,10 @@ class DRCDlg:
         impOutputFile = projectDir + "/impOutputFile"\
                 + datetime.datetime.now().strftime("%Y%m%d%H%M%S_") + "avg.wav"
         firstFileParam = DRCFileTool.LoadWaveFile(files[0].fileName)
-        maxValueStartOffset = int(len(firstFileParam.data[0]) / 2)
+        maxValueStartOffset = min(firstFileParam.maxSampleValuePos[0], 
+            int(len(firstFileParam.data[0]) / 2))
         maxValueEndOffset = int(maxValueStartOffset)
-        avgImpulseLength = maxValueEndOffset + maxValueStartOffset
+        avgImpulseLength = len(firstFileParam.data[0])
         #loop over all impulse responses for all chanels and
         #calculate average response
         result = DRCFileTool.WaveParams()
