@@ -225,9 +225,21 @@ def WriteWaveFile(params, outFileName):
 
 
 def LoadWaveFile(filename):
-    params = PrintWavHeader(filename)
+    #we have some trouble with or very limited wavefile handling
+    #as we can load sox creaed wave files we use sox to make sure that we have a format we can handle
+    strTmpWaveFileName = '/tmp/tmpWaveFile.wav'
+    commandLine = ['sox']
+    commandLine.append(filename)
+    commandLine.extend(['-twav', '-r 44100'])
+    commandLine.append( strTmpWaveFileName )
+    print(("executing sox to create tmp wave file for loading: " + str(commandLine)))
+    p = subprocess.Popen(commandLine, 0, None, None, subprocess.PIPE,
+        subprocess.PIPE)
+    (out, err) = p.communicate()
+    print(("output from sox conversion : " + str(out) + " error : " + str(err)))
+    params = PrintWavHeader(strTmpWaveFileName)
     print(("LoadWaveFile: numChannels : ", params.numChannels))
-    params = LoadRawFile(filename, params)
+    params = LoadRawFile(strTmpWaveFileName, params)
     return params
 
 
